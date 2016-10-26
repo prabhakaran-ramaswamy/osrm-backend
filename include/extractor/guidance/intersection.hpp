@@ -31,7 +31,7 @@ struct TurnOperation
 // A Connected Road is the internal representation of a potential turn. Internally, we require
 // full list of all connected roads to determine the outcome.
 // The reasoning behind is that even invalid turns can influence the perceived angles, or even
-// instructions themselves. An pososible example can be described like this:
+// instructions themselves. An possible example can be described like this:
 //
 // aaa(2)aa
 //          a - bbbbb
@@ -39,8 +39,7 @@ struct TurnOperation
 //
 // will not be perceived as a turn from (1) -> b, and as a U-turn from (1) -> (2).
 // In addition, they can influence whether a turn is obvious or not. b->(2) would also be no
-// turn-operation,
-// but rather a name change.
+// turn-operation, but rather a name change.
 //
 // If this were a normal intersection with
 //
@@ -71,6 +70,7 @@ struct ConnectedRoad final : public TurnOperation
 // small helper function to print the content of a connected road
 std::string toString(const ConnectedRoad &road);
 
+// Intersections are sorted roads: [0] being the UTurn road, then from sharp right to sharp left.
 struct Intersection final : public std::vector<ConnectedRoad>
 {
     using Base = std::vector<ConnectedRoad>;
@@ -93,6 +93,18 @@ struct Intersection final : public std::vector<ConnectedRoad>
     // given all possible turns, which is the highest connected number of lanes per turn. This value
     // is used, for example, during generation of intersections.
     std::uint8_t getHighestConnectedLaneCount(const util::NodeBasedDynamicGraph &) const;
+
+    // Returns the UTurn road we took to arrive at this intersection.
+    ConnectedRoad &getUTurnRoad();
+    const ConnectedRoad &getUTurnRoad() const;
+
+    // Returns the right-most road at this intersection.
+    ConnectedRoad &getRightmostRoad();
+    const ConnectedRoad &getRightmostRoad() const;
+
+    // Returns the left-most road at this intersection.
+    ConnectedRoad &getLeftmostRoad();
+    const ConnectedRoad &getLeftmostRoad() const;
 };
 
 Intersection::const_iterator findClosestTurn(const Intersection &intersection, const double angle);

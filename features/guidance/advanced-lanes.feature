@@ -10,8 +10,11 @@ Feature: Turn Lane Guidance
         Given the node map
             """
                           e
-            a     b       c g
-                          d
+                          .
+            a ... b ..... c . g
+                    `     .
+                     `... d
+                          .
                           f
             """
 
@@ -41,8 +44,10 @@ Feature: Turn Lane Guidance
         Given the node map
             """
                           e
-            a     b       c g
-                          d
+            a . . b . . . c g
+                    `     .
+                       `  .
+                        ` d
                           f
             """
 
@@ -71,17 +76,17 @@ Feature: Turn Lane Guidance
     Scenario: Separate Turn Lanes Next to other turns
         Given the node map
             """
-                          e
-            a     b       c g
-                          d
-                          f
-
-
-
-
-
-
-            i     h       j
+                        . e
+            a . . b . . . c g
+                  .   `   .
+                  .     ` .
+                  .       d
+                  .       f
+                  .
+                  .
+                  .
+                  .
+            i . . h . . . j
             """
 
         And the ways

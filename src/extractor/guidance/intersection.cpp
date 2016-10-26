@@ -10,6 +10,11 @@
 #include <functional>
 #include <limits>
 
+#include <boost/assert.hpp>
+
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/algorithm/find_if.hpp>
+
 namespace osrm
 {
 namespace extractor
@@ -112,6 +117,45 @@ Intersection::getHighestConnectedLaneCount(const util::NodeBasedDynamicGraph &gr
     const auto view = *this | boost::adaptors::transformed(to_lane_count);
     boost::range::find_if(view, extract_maximal_value);
     return max_lanes;
+
+    return max_lanes;
+}
+
+// Intersections are sorted roads: [0] being the UTurn road, then from sharp right to sharp left.
+
+ConnectedRoad &Intersection::getUTurnRoad()
+{
+    BOOST_ASSERT(valid());
+    return operator[](0);
+}
+
+const ConnectedRoad &Intersection::getUTurnRoad() const
+{
+    BOOST_ASSERT(valid());
+    return operator[](0);
+}
+
+ConnectedRoad &Intersection::getRightmostRoad()
+{
+    BOOST_ASSERT(valid());
+    return size() > 1 ? operator[](1) : getUTurnRoad();
+}
+
+const ConnectedRoad &Intersection::getRightmostRoad() const
+{
+    BOOST_ASSERT(valid());
+    return size() > 1 ? operator[](1) : getUTurnRoad();
+}
+
+ConnectedRoad &Intersection::getLeftmostRoad()
+{
+    BOOST_ASSERT(valid());
+    return size() > 1 ? back() : getUTurnRoad();
+}
+const ConnectedRoad &Intersection::getLeftmostRoad() const
+{
+    BOOST_ASSERT(valid());
+    return size() > 1 ? back() : getUTurnRoad();
 }
 
 } // namespace guidance
