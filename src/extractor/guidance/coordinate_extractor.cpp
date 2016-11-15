@@ -56,12 +56,28 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                                             const NodeID to_node,
                                             const std::uint8_t intersection_lanes) const
 {
-    const auto considered_lanes =
-        (intersection_lanes == 0) ? ASSUMED_LANE_COUNT : intersection_lanes;
-
     // we first extract all coordinates from the road
     auto coordinates =
         GetCoordinatesAlongRoad(intersection_node, turn_edge, traversed_in_reverse, to_node);
+
+    return ExtractRepresentativeCoordinate(intersection_node,
+                                           turn_edge,
+                                           traversed_in_reverse,
+                                           to_node,
+                                           intersection_lanes,
+                                           std::move(coordinates));
+}
+
+util::Coordinate CoordinateExtractor::ExtractRepresentativeCoordinate(
+    const NodeID intersection_node,
+    const EdgeID turn_edge,
+    const bool traversed_in_reverse,
+    const NodeID to_node,
+    const std::uint8_t intersection_lanes,
+    std::vector<util::Coordinate> coordinates) const
+{
+    const auto considered_lanes =
+        (intersection_lanes == 0) ? ASSUMED_LANE_COUNT : intersection_lanes;
 
     /* if we are looking at a straight line, we don't care where exactly the coordinate
      * is. Simply return the final coordinate. Turn angles/turn vectors are the same no matter which

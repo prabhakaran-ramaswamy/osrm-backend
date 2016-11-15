@@ -338,10 +338,10 @@ Feature: Collapse
         Given the node map
             """
               a f       g
-
-              b e
-
-
+              | |   . '
+              b-e '
+              / /
+             / /
             c d
             """
 

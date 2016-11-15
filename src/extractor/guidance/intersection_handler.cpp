@@ -754,29 +754,36 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
         const util::Coordinate coordinate_at_u_turn = node_info_list[node_at_u_turn];
 
         const double constexpr MAX_COLLAPSE_DISTANCE = 30;
-        if (util::coordinate_calculation::haversineDistance(
-                coordinate_at_intersection, coordinate_at_u_turn) < MAX_COLLAPSE_DISTANCE)
+        const auto distance_at_u_turn = intersection[0].segment_length
+                                            ? *intersection[0].segment_length
+                                            : util::coordinate_calculation::haversineDistance(
+                                                  coordinate_at_intersection, coordinate_at_u_turn);
+        if (distance_at_u_turn < MAX_COLLAPSE_DISTANCE)
         {
             // this request here actually goes against the direction of the ingoing edgeid. This can
             // even reverse the direction. Since we don't want to compute actual turns but simply
             // try to find whether there is a turn going to the opposite direction of our obvious
             // turn, this should be alright.
+            NodeID new_node;
             const auto previous_intersection = intersection_generator.GetActualNextIntersection(
-                node_at_intersection, intersection[0].eid, nullptr, nullptr);
+                node_at_intersection, intersection[0].eid, &new_node, nullptr);
 
-            const auto continue_road = intersection[best_continue];
-            for (const auto &comparison_road : previous_intersection)
+            if (new_node != node_at_intersection)
             {
-                // since we look at the intersection in the wrong direction, a similar angle
-                // actually represents a near 180 degree different in bearings between the two
-                // roads. So if there is a road that is enterable in the opposite direction just
-                // prior, a turn is not obvious
-                const auto &turn_data = node_based_graph.GetEdgeData(comparison_road.eid);
-                if (angularDeviation(comparison_road.angle, STRAIGHT_ANGLE) > GROUP_ANGLE &&
-                    angularDeviation(comparison_road.angle, continue_road.angle) <
-                        FUZZY_ANGLE_DIFFERENCE &&
-                    !turn_data.reversed && continue_data.CanCombineWith(turn_data))
-                    return 0;
+                const auto continue_road = intersection[best_continue];
+                for (const auto &comparison_road : previous_intersection)
+                {
+                    // since we look at the intersection in the wrong direction, a similar angle
+                    // actually represents a near 180 degree different in bearings between the two
+                    // roads. So if there is a road that is enterable in the opposite direction just
+                    // prior, a turn is not obvious
+                    const auto &turn_data = node_based_graph.GetEdgeData(comparison_road.eid);
+                    if (angularDeviation(comparison_road.angle, STRAIGHT_ANGLE) > GROUP_ANGLE &&
+                        angularDeviation(comparison_road.angle, continue_road.angle) <
+                            FUZZY_ANGLE_DIFFERENCE &&
+                        !turn_data.reversed && continue_data.CanCombineWith(turn_data))
+                        return 0;
+                }
             }
         }
 

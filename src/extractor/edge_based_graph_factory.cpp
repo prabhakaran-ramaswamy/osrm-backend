@@ -363,6 +363,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
     bearing_class_by_node_based_node.resize(m_node_based_graph->GetNumberOfNodes(),
                                             std::numeric_limits<std::uint32_t>::max());
 
+    std::size_t intersections_created = 0;
     for (const auto node_u : util::irange(0u, m_node_based_graph->GetNumberOfNodes()))
     {
         progress.PrintStatus(node_u);
@@ -376,6 +377,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
             const NodeID node_v = m_node_based_graph->GetTarget(edge_from_u);
             ++node_based_edge_counter;
             auto intersection = turn_analysis(node_u, edge_from_u);
+            ++intersections_created;
             BOOST_ASSERT(intersection.valid());
 
             intersection =
@@ -573,6 +575,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
         }
     }
 
+    util::SimpleLogger().Write() << "Edge Based Graph Created: " << intersections_created << " intersections.";
     util::SimpleLogger().Write() << "Created " << entry_class_hash.size() << " entry classes and "
                                  << bearing_class_hash.size() << " Bearing Classes";
 
