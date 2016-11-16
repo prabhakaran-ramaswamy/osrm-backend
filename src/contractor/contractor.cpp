@@ -568,44 +568,24 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
         if (!(update_edge_weights || update_turn_penalties))
             return;
 
-        boost::filesystem::ifstream nodes_input_stream(nodes_filename, std::ios::binary);
+        storage::io::FileReader nodes_file(nodes_filename,
+                                           storage::io::FileReader::HasNoFingerprint);
 
-        if (!nodes_input_stream)
-        {
-            throw util::exception("Failed to open " + nodes_filename);
-        }
+        nodes_file.DeserializeVector(internal_to_external_node_map);
 
-        std::uint64_t number_of_nodes = 0;
-        nodes_input_stream.read((char *)&number_of_nodes, sizeof(std::uint64_t));
-        internal_to_external_node_map.resize(number_of_nodes);
-
-        // Load all the query nodes into a vector
-        nodes_input_stream.read(reinterpret_cast<char *>(&(internal_to_external_node_map[0])),
-                                number_of_nodes * sizeof(extractor::QueryNode));
     };
 
     const auto maybe_load_geometries = [&] {
         if (!(update_edge_weights || update_turn_penalties))
             return;
 
-        std::ifstream geometry_stream(geometry_filename, std::ios::binary);
-        if (!geometry_stream)
-        {
-            throw util::exception("Failed to open " + geometry_filename);
-        }
-        unsigned number_of_indices = 0;
-        unsigned number_of_compressed_geometries = 0;
-
-        geometry_stream.read((char *)&number_of_indices, sizeof(unsigned));
-
+        storage::io::FileReader geometry_file(geometry_filename,
+                                              storage::io::FileReader::HasNoFingerprint);
+        const auto number_of_indices = geometry_file.ReadElementCount32();
         m_geometry_indices.resize(number_of_indices);
-        if (number_of_indices > 0)
-        {
-            geometry_stream.read((char *)&(m_geometry_indices[0]),
-                                 number_of_indices * sizeof(unsigned));
-        }
+        geometry_file.ReadInto(m_geometry_indices.data(), number_of_indices);
 
-        geometry_stream.read((char *)&number_of_compressed_geometries, sizeof(unsigned));
+        const auto number_of_compressed_geometries = geometry_file.ReadElementCount32();
 
         BOOST_ASSERT(m_geometry_indices.back() == number_of_compressed_geometries);
         m_geometry_node_list.resize(number_of_compressed_geometries);
@@ -614,14 +594,11 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
         if (number_of_compressed_geometries > 0)
         {
-            geometry_stream.read((char *)&(m_geometry_node_list[0]),
-                                 number_of_compressed_geometries * sizeof(NodeID));
-
-            geometry_stream.read((char *)&(m_geometry_fwd_weight_list[0]),
-                                 number_of_compressed_geometries * sizeof(EdgeWeight));
-
-            geometry_stream.read((char *)&(m_geometry_rev_weight_list[0]),
-                                 number_of_compressed_geometries * sizeof(EdgeWeight));
+            geometry_file.ReadInto(m_geometry_node_list.data(), number_of_compressed_geometries);
+            geometry_file.ReadInto(m_geometry_fwd_weight_list.data(),
+                                   number_of_compressed_geometries);
+            geometry_file.ReadInto(m_geometry_rev_weight_list.data(),
+                                   number_of_compressed_geometries);
         }
     };
 
@@ -940,12 +917,12 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
 
 void Contractor::ReadNodeLevels(std::vector<float> &node_levels) const
 {
-    boost::filesystem::ifstream order_input_stream(config.level_output_path, std::ios::binary);
+    storage::io::FileReader order_file(config.level_output_path,
+                                       storage::io::FileReader::HasNoFingerprint);
 
-    unsigned level_size;
-    order_input_stream.read((char *)&level_size, sizeof(unsigned));
+    const auto level_size = order_file.ReadElementCount32();
     node_levels.resize(level_size);
-    order_input_stream.read((char *)node_levels.data(), sizeof(float) * node_levels.size());
+    order_file.ReadInto(node_levels);
 }
 
 void Contractor::WriteNodeLevels(std::vector<float> &&in_node_levels) const

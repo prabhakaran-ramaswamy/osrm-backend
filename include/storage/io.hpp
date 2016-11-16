@@ -78,6 +78,11 @@ class FileReader
         }
     }
 
+    template <typename T> void ReadInto(std::vector<T> &target)
+    {
+        ReadInto(target.data(), target.size());
+    }
+
     template <typename T> void ReadInto(T &target) { ReadInto(&target, 1); }
 
     template <typename T> T ReadOne()
