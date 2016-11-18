@@ -13,6 +13,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <boost/optional.hpp>
+
 namespace osrm
 {
 namespace extractor
@@ -33,6 +35,17 @@ class IntersectionGenerator
                           const CompressedEdgeContainer &compressed_edge_container);
 
     Intersection operator()(const NodeID nid, const EdgeID via_eid) const;
+
+    /*
+     * Compute the shape of an intersection, returning a set of connected roads, without any further
+     * concern for which of the entries are actually allowed.
+     * The shape also only comes with turn bearings, not with turn angles. All turn angles will be
+     * set to zero
+     */
+    Intersection ComputeIntersectionShape(const NodeID center_node) const;
+    Intersection AssignTurnAnglesAndValidTags(const NodeID previous_node,
+                                              const EdgeID entering_via_edge,
+                                              Intersection intersection) const;
 
     // Graph Compression cannot compress every setting. For example any barrier/traffic light cannot
     // be compressed. As a result, a simple road of the form `a ----- b` might end up as having an
@@ -62,6 +75,9 @@ class IntersectionGenerator
 
     // own state, used to find the correct coordinates along a road
     const CoordinateExtractor coordinate_extractor;
+
+    boost::optional<NodeID> GetOnlyAllowedTurnIfExistent(const NodeID coming_from_node,
+                                                         const NodeID node_at_intersection) const;
 };
 
 } // namespace guidance
