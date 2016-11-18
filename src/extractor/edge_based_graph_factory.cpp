@@ -384,9 +384,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                                                     node_at_center_of_intersection);
 
             if (m_node_based_graph->GetEdgeData(incoming_edge).reversed)
-            {
                 continue;
-            }
 
             ++node_based_edge_counter;
             auto intersection = turn_analysis(node_along_road_entering, incoming_edge);
@@ -398,6 +396,9 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                     node_along_road_entering, incoming_edge, intersection_shape));
 
             const auto print = [&]() {
+                std::cout << "[node] "
+                          << (util::Coordinate)m_node_info_list[node_at_center_of_intersection]
+                          << std::endl;
                 std::cout << "Original:\n";
                 for (auto road : intersection)
                     std::cout << "\t" << toString(road) << std::endl;
@@ -427,7 +428,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 return true;
             };
 
-            compare_intersections(intersection,compare_intersection);
+            compare_intersections(intersection, compare_intersection);
             BOOST_ASSERT(intersection.valid());
 
             intersection = turn_lane_handler.assignTurnLanes(

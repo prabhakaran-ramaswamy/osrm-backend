@@ -50,8 +50,10 @@ bool findPreviousIntersection(const NodeID node_v,
     // (looking at the reverse direction).
     const auto node_w = node_based_graph.GetTarget(via_edge);
     const auto u_turn_at_node_w = intersection[0].eid;
-    const auto node_v_reverse_intersection = intersection_generator(node_w, u_turn_at_node_w);
+    if( node_based_graph.GetTarget(u_turn_at_node_w) != node_v )
+        return false;
 
+    const auto node_v_reverse_intersection = intersection_generator(node_w, u_turn_at_node_w);
     // Continue along the straightmost turn. If there is no straight turn, we cannot find a valid
     // previous intersection.
     const auto straightmost_at_v_in_reverse =

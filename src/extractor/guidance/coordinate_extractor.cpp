@@ -63,6 +63,10 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     auto coordinates =
         GetCoordinatesAlongRoad(intersection_node, turn_edge, traversed_in_reverse, to_node);
 
+    // Fallback. These roads are small broken self-loops that shouldn't be in the data at all
+    if (intersection_node == to_node)
+        coordinates[1];
+
     /* if we are looking at a straight line, we don't care where exactly the coordinate
      * is. Simply return the final coordinate. Turn angles/turn vectors are the same no matter which
      * coordinate we look at.
@@ -258,7 +262,8 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
          * We distinguish between turns that simply model the initial way of getting onto the
          * destination lanes and the ones that performa a larger turn.
          */
-        const double offset = 0.5 * considered_lanes * ASSUMED_LANE_WIDTH;
+        const double offset =
+            std::min(0.5 * considered_lanes * ASSUMED_LANE_WIDTH, 0.2 * segment_distances.back());
         coordinates = TrimCoordinatesToLength(std::move(coordinates), offset, segment_distances);
         segment_distances.resize(coordinates.size());
         segment_distances.back() = offset;

@@ -63,10 +63,6 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
     if (first_data.reversed == second_data.reversed)
         return false;
 
-    // one of them needs to be invalid
-    if (intersection[first_index].entry_allowed && intersection[second_index].entry_allowed)
-        return false;
-
     // mergeable if the angle is not too big
     const auto angle_between =
         angularDeviation(intersection[first_index].angle, intersection[second_index].angle);
@@ -112,15 +108,18 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
         const auto other_turn_angle = util::coordinate_calculation::computeAngle(
             coordinate_at_in_edge, coordinate_at_intersection, coordinate_at_other_target);
 
+        // fuzzy becomes narrower due to minor differences in angle computations, yay floating point
         const bool becomes_narrower =
             angularDeviation(turn_angle, other_turn_angle) < NARROW_TURN_ANGLE &&
             angularDeviation(turn_angle, other_turn_angle) <=
-                angularDeviation(intersection[index].angle, intersection[other_index].angle);
+                angularDeviation(intersection[index].angle, intersection[other_index].angle) +
+                    MAXIMAL_ALLOWED_NO_TURN_DEVIATION;
 
         const bool has_same_deviation =
             std::abs(angularDeviation(intersection[index].angle, STRAIGHT_ANGLE) -
                      angularDeviation(intersection[other_index].angle, STRAIGHT_ANGLE)) <
             MAXIMAL_ALLOWED_NO_TURN_DEVIATION;
+
         return becomes_narrower || has_same_deviation;
     };
 

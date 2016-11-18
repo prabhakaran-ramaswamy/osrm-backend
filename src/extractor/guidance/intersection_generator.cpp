@@ -58,14 +58,18 @@ IntersectionGenerator::ComputeIntersectionShape(const NodeID node_at_center_of_i
         double bearing = 0.;
         // the default distance we lookahead on a road. This distance prevents small mapping
         // errors to impact the turn angles.
-        const auto third_coordinate =
+        const auto coordinate_along_edge_leaving =
             coordinate_extractor.GetCoordinateAlongRoad(node_at_center_of_intersection,
                                                         edge_connected_to_intersection,
                                                         !INVERT,
                                                         to_node,
                                                         intersection_lanes);
 
-        bearing = util::coordinate_calculation::bearing(turn_coordinate, third_coordinate);
+        bearing =
+            util::coordinate_calculation::bearing(turn_coordinate, coordinate_along_edge_leaving);
+
+        auto coords = coordinate_extractor.GetCoordinatesAlongRoad(
+            node_at_center_of_intersection, edge_connected_to_intersection, !INVERT, to_node);
 
         intersection.push_back(
             ConnectedRoad(TurnOperation{edge_connected_to_intersection,
@@ -114,38 +118,6 @@ Intersection IntersectionGenerator::AssignTurnAnglesAndValidTags(const NodeID pr
             previous_node, node_at_intersection, destination);
     };
 
-    const auto allow_uturn_at_barrier = [&]() {
-        const auto &uturn_data = node_based_graph.GetEdgeData(uturn_edge_itr->eid);
-
-        // we can't turn back onto oneway streets
-        if (uturn_data.reversed)
-            return false;
-
-        // don't allow explicitly restricted turns
-        if (is_restricted(previous_node))
-            return false;
-
-        // we define dead ends as roads that can only be entered via the possible u-turn
-        const auto is_bidirectional = [&](const EdgeID via_eid) {
-            const auto to_node = node_based_graph.GetTarget(via_eid);
-            const auto reverse_edge = node_based_graph.FindEdge(to_node, node_at_intersection);
-            BOOST_ASSERT(reverse_edge != SPECIAL_EDGEID);
-            return !node_based_graph.GetEdgeData(reverse_edge).reversed;
-        };
-
-        const auto bidirectional_edges = [&]() {
-            std::uint32_t count = 0;
-            for (const auto eid : node_based_graph.GetAdjacentEdgeRange(node_at_intersection))
-                if (is_bidirectional(eid))
-                    ++count;
-            return count;
-        }();
-
-        // Checking for dead-end streets is kind of difficult. There is obvious dead ends (single
-        // road connected)
-        return bidirectional_edges <= 1;
-    }();
-
     const auto uturn_bearing = util::bearing::reverseBearing(uturn_edge_itr->bearing);
     for (auto &road : intersection)
     {
@@ -158,20 +130,56 @@ Intersection IntersectionGenerator::AssignTurnAnglesAndValidTags(const NodeID pr
             // however we need this for capture intersection shape for incoming one-ways
             !road_data.reversed &&
             // we are not turning over a barrier
-            (!is_barrier_node || (allow_uturn_at_barrier && road.eid == uturn_edge_itr->eid)) &&
+            (!is_barrier_node || road_destination_node == previous_node) &&
             // don't allow restricted turns
             !is_restricted(road_destination_node);
 
         road.angle = util::bearing::angleBetweenBearings(uturn_bearing, road.bearing);
     }
 
+    // number of found valid exit roads
     const auto valid_count =
-        boost::count_if(intersection, [](const ConnectedRoad &road) { return road.entry_allowed; });
+        std::count_if(intersection.begin(), intersection.end(), [](const ConnectedRoad &road) {
+            return road.entry_allowed;
+        });
 
-    if (2 >= valid_count && uturn_edge_itr->entry_allowed )
+    // in general, we don't wan't to allow u-turns. If we don't look at a barrier, we have to check
+    // for dead end streets. These are the only ones that we allow uturns for, next to barriers
+    // (which are also kind of a dead end, but we don't have to check these again :))
+    if ((uturn_edge_itr->entry_allowed && !is_barrier_node && valid_count != 1) || valid_count == 0)
     {
-        std::cout << "Disable u-turn" << std::endl;
-        uturn_edge_itr->entry_allowed = false;
+        const auto allow_uturn_at_dead_end = [&]() {
+            const auto &uturn_data = node_based_graph.GetEdgeData(uturn_edge_itr->eid);
+
+            // we can't turn back onto oneway streets
+            if (uturn_data.reversed)
+                return false;
+
+            // don't allow explicitly restricted turns
+            if (is_restricted(previous_node))
+                return false;
+
+            // we define dead ends as roads that can only be entered via the possible u-turn
+            const auto is_bidirectional = [&](const EdgeID via_eid) {
+                const auto to_node = node_based_graph.GetTarget(via_eid);
+                const auto reverse_edge = node_based_graph.FindEdge(to_node, node_at_intersection);
+                BOOST_ASSERT(reverse_edge != SPECIAL_EDGEID);
+                return !node_based_graph.GetEdgeData(reverse_edge).reversed;
+            };
+
+            const auto bidirectional_edges = [&]() {
+                std::uint32_t count = 0;
+                for (const auto eid : node_based_graph.GetAdjacentEdgeRange(node_at_intersection))
+                    if (is_bidirectional(eid))
+                        ++count;
+                return count;
+            }();
+
+            // Checking for dead-end streets is kind of difficult. There is obvious dead ends
+            // (single road connected)
+            return bidirectional_edges <= 1;
+        }();
+        uturn_edge_itr->entry_allowed = allow_uturn_at_dead_end;
     }
 
     std::sort(std::begin(intersection),
@@ -220,6 +228,11 @@ IntersectionGenerator::GetOnlyAllowedTurnIfExistent(const NodeID coming_from_nod
 Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                                                       const EdgeID via_eid) const
 {
+    BOOST_ASSERT([this](const NodeID from_node, const EdgeID via_eid) {
+        const auto range = node_based_graph.GetAdjacentEdgeRange(from_node);
+        return range.front() <= via_eid && via_eid <= range.back();
+    }(from_node, via_eid));
+
     Intersection intersection;
     const NodeID turn_node = node_based_graph.GetTarget(via_eid);
     // reserve enough items (+ the possibly missing u-turn edge)
@@ -247,6 +260,14 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
 
     const auto intersection_lanes = getLaneCountAtIntersection(turn_node, node_based_graph);
 
+    // The first coordinate (the origin) can depend on the number of lanes turning onto,
+    // just as the target coordinate can. Here we compute the corrected coordinate for the
+    // incoming edge.
+    const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
+        from_node, via_eid, INVERT, turn_node, intersection_lanes);
+
+    const auto uturn_bearing =
+        util::coordinate_calculation::bearing(turn_coordinate, first_coordinate);
     for (const EdgeID onto_edge : node_based_graph.GetAdjacentEdgeRange(turn_node))
     {
         BOOST_ASSERT(onto_edge != SPECIAL_EDGEID);
@@ -267,12 +288,6 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
 
         auto angle = 0.;
         double bearing = 0.;
-
-        // The first coordinate (the origin) can depend on the number of lanes turning onto,
-        // just as the target coordinate can. Here we compute the corrected coordinate for the
-        // incoming edge.
-        const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
-            from_node, via_eid, INVERT, turn_node, intersection_lanes);
 
         if (from_node == to_node)
         {
@@ -298,13 +313,12 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                     turn_is_valid = number_of_emmiting_bidirectional_edges <= 1;
                 }
             }
+
             has_uturn_edge = true;
             BOOST_ASSERT(angle >= 0. && angle < std::numeric_limits<double>::epsilon());
         }
         else
         {
-            // the default distance we lookahead on a road. This distance prevents small mapping
-            // errors to impact the turn angles.
             const auto third_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
                 turn_node, onto_edge, !INVERT, to_node, intersection_lanes);
 
@@ -312,6 +326,26 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                 first_coordinate, turn_coordinate, third_coordinate);
 
             bearing = util::coordinate_calculation::bearing(turn_coordinate, third_coordinate);
+
+            const auto compare_angle = util::bearing::angleBetweenBearings(
+                util::bearing::reverseBearing(uturn_bearing), bearing);
+            if (std::abs(angle - compare_angle) > 0.1 &&
+                util::Coordinate(node_info_list[turn_node]) !=
+                    util::Coordinate(node_info_list[to_node]) &&
+                util::Coordinate(node_info_list[turn_node]) !=
+                    util::Coordinate(node_info_list[from_node]))
+            {
+                std::cout << "Params: " << from_node << " via: " << via_eid
+                          << " Intersection: " << turn_node << " Dest: " << to_node << std::endl;
+                std::cout << "Angle does not match bearings: " << angle
+                          << " Expected: " << compare_angle << " In: " << uturn_bearing
+                          << " Out: " << bearing << " Coords: " << first_coordinate << " "
+                          << turn_coordinate << " " << third_coordinate << std::endl;
+                std::cout << "Direct Coordinates: " << util::Coordinate(node_info_list[turn_node])
+                          << " And: " << util::Coordinate(node_info_list[to_node]) << std::endl;
+                std::cout << std::endl;
+                assert(false);
+            }
 
             if (std::abs(angle) < std::numeric_limits<double>::epsilon())
                 has_uturn_edge = true;
@@ -326,8 +360,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
     }
 
     // We hit the case of a street leading into nothing-ness. Since the code here assumes
-    // that this
-    // will never happen we add an artificial invalid uturn in this case.
+    // that this will never happen we add an artificial invalid uturn in this case.
     if (!has_uturn_edge)
     {
         const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
