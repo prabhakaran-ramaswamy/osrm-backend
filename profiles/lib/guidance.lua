@@ -148,7 +148,8 @@ function Guidance.get_turn_lanes(way)
     --backwards turn lanes need to treat bw_psv as fw_psv and vice versa
     turn_lanes_bw = process_lanes(turn_lanes_bw,vehicle_lanes_bw,fw_psv,bw_psv)
 
-    return turn_lanes, turn_lanes_fw, turn_lanes_bw
+    return turn_lanes_fw or turn_lanes,
+           turn_lanes_bw or turn_lanes
 end
 
 return Guidance

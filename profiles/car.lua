@@ -530,22 +530,14 @@ end
 
 -- handle turn lanes
 function handle_turn_lanes(way,result)
-  local turn_lanes = ''
-  local turn_lanes_forward = ''
-  local turn_lanes_backward = ''
+  local forward, backward = get_turn_lanes(way)
 
-  turn_lanes, turn_lanes_forward, turn_lanes_backward = get_turn_lanes(way)
-  if turn_lanes and turn_lanes ~= '' then
-    result.turn_lanes_forward = turn_lanes;
-    result.turn_lanes_backward = turn_lanes;
-  else
-    if turn_lanes_forward and turn_lanes_forward ~= ''  then
-      result.turn_lanes_forward = turn_lanes_forward;
-    end
+  if forward then
+    result.turn_lanes_forward = forward
+  end
 
-    if turn_lanes_backward and turn_lanes_backward ~= '' then
-      result.turn_lanes_backward = turn_lanes_backward;
-    end
+  if backward then
+    result.turn_lanes_backward = backward
   end
 end
 
