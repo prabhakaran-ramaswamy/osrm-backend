@@ -58,8 +58,14 @@ local way = {
   --hov = 'designated',
   --access = 'no'
   --destination = 'Berlin',
-  ["destination:ref"] = 'Nuremberg',
+  --["destination:ref"] = 'Nuremberg',
   --["destination:ref:forward"] = 'Hamburg;Dresden',
+  --max = 'mc',
+  --['max:forward'] = 'mf',
+  ['max:backward'] = 'mb',
+  --stop = 'sc',
+  --['stop:forward'] = 'sf',
+  --['stop:backward'] = 'sb',
 }
 -- tag function normally provided via C++
 function way:get_value_by_key(k)

@@ -5,6 +5,7 @@ local set_classification = require("lib/guidance").set_classification
 local get_turn_lanes = require("lib/guidance").get_turn_lanes
 local Set = require('lib/set')
 local Sequence = require('lib/sequence')
+local TagHelper = require('lib/tag_helper')
 
 -- Begin of globals
 barrier_whitelist = Set {
@@ -643,41 +644,17 @@ end
 
 -- maxspeed and advisory maxspeed
 function handle_maxspeed(way,result)
-  -- Override speed settings if explicit forward/backward maxspeeds are given
-  local maxspeed_forward = parse_maxspeed(way:get_value_by_key("maxspeed:forward"))
-  local maxspeed_backward = parse_maxspeed(way:get_value_by_key("maxspeed:backward"))
-  if maxspeed_forward and maxspeed_forward > 0 then
-    if mode.inaccessible ~= result.forward_mode and 
-       mode.inaccessible ~= result.backward_mode then
-       result.backward_speed = result.forward_speed
-    end
-    result.forward_speed = maxspeed_forward
-  end
-  if maxspeed_backward and maxspeed_backward > 0 then
-    result.backward_speed = maxspeed_backward
+  local keys = Sequence { 'maxspeed:advisory', 'maxspeed' }
+  local forward, backward = TagHelper.pick_directional_values(way,keys)
+  forward = parse_maxspeed(forward)
+  backward = parse_maxspeed(backward)
+
+  if forward and forward > 0 then
+    result.forward_speed = forward
   end
 
-  -- Override speed settings if advisory forward/backward maxspeeds are given
-  local advisory_speed = parse_maxspeed(way:get_value_by_key("maxspeed:advisory"))
-  local advisory_forward = parse_maxspeed(way:get_value_by_key("maxspeed:advisory:forward"))
-  local advisory_backward = parse_maxspeed(way:get_value_by_key("maxspeed:advisory:backward"))
-  -- apply bi-directional advisory speed first
-  if advisory_speed and advisory_speed > 0 then
-    if mode.inaccessible ~= result.forward_mode then
-      result.forward_speed = advisory_speed
-    end
-    if mode.inaccessible ~= result.backward_mode then
-      result.backward_speed = advisory_speed
-    end
-  end
-  if advisory_forward and advisory_forward > 0 then
-    if mode.inaccessible ~= result.forward_mode and mode.inaccessible ~= result.backward_mode then
-      result.backward_speed = result.forward_speed
-    end
-    result.forward_speed = advisory_forward
-  end
-  if advisory_backward and advisory_backward > 0 then
-    result.backward_speed = advisory_backward
+  if backward and backward > 0 then
+    result.backward_speed = backward
   end
 end
 
