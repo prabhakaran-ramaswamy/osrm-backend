@@ -295,59 +295,54 @@ function initial_routability_check(way,result,data)
          way:get_value_by_key('bridge') ~= nil
 end
 
--- handle high occupancy vehicle tags
-function handle_hov(way,result,data)
-  -- respect user-preference for HOV-only ways
-  if ignore_hov_ways then
-    local hov = way:get_value_by_key("hov")
-    if "designated" == hov then
+-- all lanes restricted to hov vehicles?
+local function has_all_designated_hov_lanes(lanes)
+  if not lanes then
+    return false
+  end
+  -- This gmatch call effectively splits the string on | chars.
+  -- we append an extra | to the end so that we can match the final part
+  for lane in (lanes .. '|'):gmatch("([^|]*)|") do
+    if lane and lane ~= "designated" then
       return false
     end
+  end
+  return true
+end
 
-    -- also respect user-preference for HOV-only ways when all lanes are HOV-designated
-    local function has_all_designated_hov_lanes(lanes)
-      local all = true
-      -- This gmatch call effectively splits the string on | chars.
-      -- we append an extra | to the end so that we can match the final part
-      for lane in (lanes .. '|'):gmatch("([^|]*)|") do
-        if lane and lane ~= "designated" then
-          all = false
-          break
-        end
-      end
-      return all
+-- handle high occupancy vehicle tags
+function handle_hov(way,result,data)
+  -- respect user-preference for HOV
+  if not ignore_hov_ways then
+    return
+  end
+
+  -- check if way is hov only
+  local hov = way:get_value_by_key("hov")
+  if "designated" == hov then
+    return false
+  end
+
+  -- check if all lanes are hov only
+  local hov_lanes_forward, hov_lanes_backward = TagHelper.directional_values(way,'hov:lanes')
+  local inaccessible_forward = has_all_designated_hov_lanes(hov_lanes_forward)
+  local inaccessible_backward = has_all_designated_hov_lanes(hov_lanes_backward)
+
+  -- forward/backward lane depend on a way's direction
+  if data.is_reverse_oneway then
+    if inaccessible_forward then
+      result.backward_mode = mode.inaccessible
     end
-
-    local hov_lanes = way:get_value_by_key("hov:lanes")
-    local hov_lanes_forward = way:get_value_by_key("hov:lanes:forward")
-    local hov_lanes_backward = way:get_value_by_key("hov:lanes:backward")
-
-    local hov_all_designated = hov_lanes and
-                               has_all_designated_hov_lanes(hov_lanes)
-
-    local hov_all_designated_forward = hov_lanes_forward and
-                                       has_all_designated_hov_lanes(hov_lanes_forward)
-
-    local hov_all_designated_backward = hov_lanes_backward and
-                                        has_all_designated_hov_lanes(hov_lanes_backward)
-
-    -- forward/backward lane depend on a way's direction
-    if hov_all_designated or hov_all_designated_forward then
-      if data.is_reverse_oneway then
-        result.backward_mode = mode.inaccessible
-      else
-        result.forward_mode = mode.inaccessible
-      end
+    if inaccessible_backward then
+      result.forward_mode = mode.inaccessible
     end
-
-    if hov_all_designated_backward then
-      if data.is_reverse_oneway then
-        result.forward_mode = mode.inaccessible
-      else
-        result.backward_mode = mode.inaccessible
-      end
+  else
+    if inaccessible_forward then
+      result.forward_mode = mode.inaccessible
     end
-
+    if inaccessible_backward then
+      result.backward_mode = mode.inaccessible
+    end
   end
 end
 
