@@ -296,7 +296,7 @@ function initial_routability_check(way,result,data)
 end
 
 -- handle high occupancy vehicle tags
-function handle_hov(way,result)
+function handle_hov(way,result,data)
   -- respect user-preference for HOV-only ways
   if ignore_hov_ways then
     local hov = way:get_value_by_key("hov")
@@ -332,11 +332,8 @@ function handle_hov(way,result)
                                         has_all_designated_hov_lanes(hov_lanes_backward)
 
     -- forward/backward lane depend on a way's direction
-    local oneway = way:get_value_by_key("oneway")
-    local reverse = oneway == "-1"
-
     if hov_all_designated or hov_all_designated_forward then
-      if reverse then
+      if data.is_reverse_oneway then
         result.backward_mode = mode.inaccessible
       else
         result.forward_mode = mode.inaccessible
@@ -344,7 +341,7 @@ function handle_hov(way,result)
     end
 
     if hov_all_designated_backward then
-      if reverse then
+      if data.is_reverse_oneway then
         result.forward_mode = mode.inaccessible
       else
         result.backward_mode = mode.inaccessible
@@ -618,10 +615,12 @@ function handle_speed_scaling(way,result)
 end
 
 -- oneways
-function handle_oneway(way,result)
+function handle_oneway(way,result,data)
   local oneway = way:get_value_by_key("oneway")
+  data.oneway = oneway
   if obey_oneway then
     if oneway == "-1" then
+      data.is_reverse_oneway = true
       result.forward_mode = mode.inaccessible
 
       local is_forward = false
@@ -713,8 +712,8 @@ function way_function(way, result)
   -- access tags, e.g: motorcar, motor_vehicle, vehicle
   if handle_access(way,result,data) == false then return end
 
-  -- check high occupancy vehicle restrictions
-  if handle_hov(way,result) == false then return end
+  -- check whether forward/backward directons are routable
+  if handle_oneway(way,result,data) == false then return end
 
   -- check whether we're using a special transport mode
   if handle_ferries(way,result) == false then return end
@@ -723,8 +722,8 @@ function way_function(way, result)
   -- handle service road restrictions
   if handle_service(way,result) == false then return end
 
-  -- check whether forward/backward directons are routable
-  if handle_oneway(way,result) == false then return end
+  -- check high occupancy vehicle restrictions
+  if handle_hov(way,result,data) == false then return end
 
   -- compute speed taking into account way type, maxspeed tags, etc.
   if handle_speed(way,result,data) == false then return end
