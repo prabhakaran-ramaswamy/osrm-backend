@@ -1,5 +1,11 @@
 local TagHelper = {}
 
+-- return forward or backward value and key for a specific tag,
+-- depending on is_forward.
+-- e.g. for is_forward=true and maxspeed search:
+--   maxspeed:forward
+--   maxspeed
+
 function TagHelper.directional_key_value(way,is_forward,key)
   local direction
   if is_forward then
@@ -18,6 +24,12 @@ function TagHelper.directional_key_value(way,is_forward,key)
     return key, value
   end 
 end
+
+-- return forward or backward value for a specific tag,
+-- depending on is_forward.
+-- e.g. for is_forward=true and maxspeed search:
+--   maxspeed:forward
+--   maxspeed
 
 function TagHelper.directional_value(way,is_forward,key)
   local direction
