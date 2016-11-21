@@ -1,5 +1,6 @@
 #include "extractor/guidance/intersection_normalizer.hpp"
 #include "extractor/guidance/toolkit.hpp"
+#include "util/bearing.hpp"
 #include "util/guidance/toolkit.hpp"
 
 namespace osrm
@@ -65,29 +66,15 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
 
     // mergeable if the angle is not too big
     const auto angle_between =
-        angularDeviation(intersection[first_index].angle, intersection[second_index].angle);
-
-    const auto intersection_lanes = intersection.getHighestConnectedLaneCount(node_based_graph);
-
-    const auto coordinate_at_in_edge =
-        intersection_generator.GetCoordinateExtractor().GetCoordinateAlongRoad(
-            node_at_intersection,
-            intersection[0].eid,
-            !INVERT,
-            node_based_graph.GetTarget(intersection[0].eid),
-            intersection_lanes);
+        angularDeviation(intersection[first_index].bearing, intersection[second_index].bearing);
 
     const auto coordinate_at_intersection = node_coordinates[node_at_intersection];
 
     if (angle_between >= 120)
         return false;
 
-    const auto isValidYArm = [this,
-                              intersection,
-                              coordinate_at_in_edge,
-                              coordinate_at_intersection,
-                              node_at_intersection](const std::size_t index,
-                                                    const std::size_t other_index) {
+    const auto isValidYArm = [this, intersection, coordinate_at_intersection, node_at_intersection](
+        const std::size_t index, const std::size_t other_index) {
         const auto GetActualTarget = [&](const std::size_t index) {
             EdgeID last_in_edge_id;
             intersection_generator.GetActualNextIntersection(
@@ -103,24 +90,25 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
         const auto coordinate_at_target = node_coordinates[target_id];
         const auto coordinate_at_other_target = node_coordinates[other_target_id];
 
-        const auto turn_angle = util::coordinate_calculation::computeAngle(
-            coordinate_at_in_edge, coordinate_at_intersection, coordinate_at_target);
-        const auto other_turn_angle = util::coordinate_calculation::computeAngle(
-            coordinate_at_in_edge, coordinate_at_intersection, coordinate_at_other_target);
+        const auto turn_bearing =
+            util::coordinate_calculation::bearing(coordinate_at_intersection, coordinate_at_target);
+        const auto other_turn_bearing = util::coordinate_calculation::bearing(
+            coordinate_at_intersection, coordinate_at_other_target);
 
         // fuzzy becomes narrower due to minor differences in angle computations, yay floating point
         const bool becomes_narrower =
-            angularDeviation(turn_angle, other_turn_angle) < NARROW_TURN_ANGLE &&
-            angularDeviation(turn_angle, other_turn_angle) <=
-                angularDeviation(intersection[index].angle, intersection[other_index].angle) +
+            angularDeviation(turn_bearing, other_turn_bearing) < NARROW_TURN_ANGLE &&
+            angularDeviation(turn_bearing, other_turn_bearing) <=
+                angularDeviation(intersection[index].bearing, intersection[other_index].bearing) +
                     MAXIMAL_ALLOWED_NO_TURN_DEVIATION;
 
+        /*
         const bool has_same_deviation =
             std::abs(angularDeviation(intersection[index].angle, STRAIGHT_ANGLE) -
                      angularDeviation(intersection[other_index].angle, STRAIGHT_ANGLE)) <
             MAXIMAL_ALLOWED_NO_TURN_DEVIATION;
-
-        return becomes_narrower || has_same_deviation;
+        */
+        return becomes_narrower;// || has_same_deviation;
     };
 
     const bool is_y_arm_first = isValidYArm(first_index, second_index);
@@ -220,9 +208,9 @@ Intersection IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersect
         }
     };
 
-    const auto merge = [combineAngles](const ConnectedRoad &first,
-                                       const ConnectedRoad &second) -> ConnectedRoad {
-        ConnectedRoad result = first.entry_allowed ? first : second;
+    const auto merge = [this, combineAngles](const ConnectedRoad &first,
+                                             const ConnectedRoad &second) -> ConnectedRoad {
+        ConnectedRoad result = !node_based_graph.GetEdgeData(first.eid).reversed ? first : second;
         result.angle = combineAngles(first.angle, second.angle);
         result.bearing = combineAngles(first.bearing, second.bearing);
         BOOST_ASSERT(0 <= result.angle && result.angle <= 360.0);
@@ -398,7 +386,7 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
 
         // the order does not matter
         const auto get_offset = [](const ConnectedRoad &lhs, const ConnectedRoad &rhs) {
-            return 0.5 * angularDeviation(lhs.angle, rhs.angle);
+            return 0.5 * angularDeviation(lhs.bearing, rhs.bearing);
         };
 
         // When offsetting angles in our turns, we don't want to get past the next turn. This
@@ -408,7 +396,7 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
                                              const ConnectedRoad &road,
                                              const ConnectedRoad &next_road_in_offset_direction) {
             const auto offset_limit =
-                angularDeviation(road.angle, next_road_in_offset_direction.angle);
+                angularDeviation(road.bearing, next_road_in_offset_direction.bearing);
             // limit the offset with an additional buffer
             return (offset + MAXIMAL_ALLOWED_NO_TURN_DEVIATION > offset_limit) ? 0.5 * offset_limit
                                                                                : offset;

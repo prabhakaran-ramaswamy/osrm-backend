@@ -86,6 +86,7 @@ Intersection IntersectionGenerator::AssignTurnAnglesAndValidTags(const NodeID pr
                                                                  const EdgeID entering_via_edge,
                                                                  Intersection intersection) const
 {
+    BOOST_ASSERT(intersection.valid());
     const auto node_at_intersection = node_based_graph.GetTarget(entering_via_edge);
 
     // check if there is a single valid turn entering the current intersection
