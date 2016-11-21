@@ -193,8 +193,9 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     segment_distances.back() = std::min(segment_distances.back(), lookahead_distance);
     BOOST_ASSERT(segment_distances.size() == coordinates.size());
 
-    // if we are now left with two, well than we don't have to worry
-    if (coordinates.size() == 2)
+    // if we are now left with two, well than we don't have to worry, or the segment is very small
+    if (coordinates.size() == 2 ||
+        segment_distances.back() <= distance_to_skip_over_due_to_coordinate_inaccuracies)
     {
         BOOST_ASSERT(is_valid_result(coordinates.back()));
         return coordinates.back();
@@ -308,6 +309,8 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                 considered_lanes * 0.5 * ASSUMED_LANE_WIDTH,
                 turn_edge_data))
     {
+        if (segment_distances.back() <= distance_to_skip_over_due_to_coordinate_inaccuracies)
+            return coordinates.back();
         /*
          * In curves we now have to distinguish between larger curves and tiny curves modelling the
          * actual turn in the beginnig.
