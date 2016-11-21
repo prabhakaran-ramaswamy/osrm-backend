@@ -266,8 +266,6 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
     const auto first_coordinate = coordinate_extractor.GetCoordinateAlongRoad(
         from_node, via_eid, INVERT, turn_node, intersection_lanes);
 
-    const auto uturn_bearing =
-        util::coordinate_calculation::bearing(turn_coordinate, first_coordinate);
     for (const EdgeID onto_edge : node_based_graph.GetAdjacentEdgeRange(turn_node))
     {
         BOOST_ASSERT(onto_edge != SPECIAL_EDGEID);
@@ -326,30 +324,6 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                 first_coordinate, turn_coordinate, third_coordinate);
 
             bearing = util::coordinate_calculation::bearing(turn_coordinate, third_coordinate);
-
-            const auto compare_angle = util::bearing::angleBetweenBearings(
-                util::bearing::reverseBearing(uturn_bearing), bearing);
-            if (std::abs(angle - compare_angle) > 0.1 &&
-                util::Coordinate(node_info_list[turn_node]) !=
-                    util::Coordinate(node_info_list[to_node]) &&
-                util::Coordinate(node_info_list[turn_node]) !=
-                    util::Coordinate(node_info_list[from_node]))
-            {
-                std::cout << "Params: " << from_node << " via: " << via_eid
-                          << " Intersection: " << turn_node << " Dest: " << to_node << std::endl;
-                std::cout << "Angle does not match bearings: " << angle
-                          << " Expected: " << compare_angle << " In: " << uturn_bearing << "\n"
-                          << " Out: " << bearing << " Coords (from,turn,to): " << first_coordinate << " "
-                          << turn_coordinate << " " << third_coordinate << std::endl;
-                const auto first_coordinates = coordinate_extractor.GetCoordinatesAlongRoad(
-                        from_node, via_eid, INVERT, turn_node);
-                std::cout << "In Coordinates:";
-                for( const auto c: first_coordinates )
-                    std::cout << " " << c;
-                std::cout << std::endl;
-                std::cout << "From Bucket Reference: " << coordinate_extractor.compressed_geometries.HasEntryForID(via_eid) << std::endl;
-                assert(false);
-            }
 
             if (std::abs(angle) < std::numeric_limits<double>::epsilon())
                 has_uturn_edge = true;

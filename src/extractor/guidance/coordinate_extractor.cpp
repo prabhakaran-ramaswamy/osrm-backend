@@ -61,6 +61,8 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                                     ? node_coordinates[to_node]
                                     : node_coordinates[intersection_node]) != coordinate;
     };
+    // this is only used for debug purposes in assertions. We don't want warnings about it
+    (void) is_valid_result;
 
     const auto considered_lanes =
         (intersection_lanes == 0) ? ASSUMED_LANE_COUNT : intersection_lanes;

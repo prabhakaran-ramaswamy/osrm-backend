@@ -387,48 +387,13 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 continue;
 
             ++node_based_edge_counter;
-            auto intersection = turn_analysis(node_along_road_entering, incoming_edge);
 
-            const auto compare_intersection = turn_analysis.PostProcess(
+            auto intersection = turn_analysis.PostProcess(
                 node_along_road_entering,
                 incoming_edge,
                 generator.AssignTurnAnglesAndValidTags(
                     node_along_road_entering, incoming_edge, intersection_shape));
 
-            const auto print = [&]() {
-                std::cout << "[node] "
-                          << (util::Coordinate)m_node_info_list[node_at_center_of_intersection]
-                          << std::endl;
-                std::cout << "Original:\n";
-                for (auto road : intersection)
-                    std::cout << "\t" << toString(road) << std::endl;
-
-                std::cout << "Compare:\n";
-                for (auto road : compare_intersection)
-                    std::cout << "\t" << toString(road) << std::endl;
-            };
-
-            // compare intersections:
-            const auto compare_intersections = [&](const guidance::Intersection &orig,
-                                                   const guidance::Intersection &new_one) {
-                if (orig.size() != new_one.size())
-                {
-                    print();
-                    return false;
-                }
-                for (std::size_t i = 0; i < orig.size(); ++i)
-                {
-                    if (std::abs(orig[i].angle - new_one[i].angle) > 0.1 ||
-                        orig[i].entry_allowed != new_one[i].entry_allowed)
-                    {
-                        print();
-                        return false;
-                    }
-                }
-                return true;
-            };
-
-            compare_intersections(intersection, compare_intersection);
             BOOST_ASSERT(intersection.valid());
 
             intersection = turn_lane_handler.assignTurnLanes(
