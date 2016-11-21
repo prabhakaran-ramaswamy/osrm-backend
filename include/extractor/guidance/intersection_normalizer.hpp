@@ -13,6 +13,7 @@
 #include "extractor/suffix_table.hpp"
 #include "util/name_table.hpp"
 
+#include <unordered_map>
 #include <vector>
 
 namespace osrm
@@ -45,7 +46,9 @@ class IntersectionNormalizer
     // The function takes an intersection an converts it to a `perceived` intersection which closer
     // represents how a human might experience the intersection
     OSRM_ATTR_WARN_UNUSED
-    Intersection operator()(const NodeID node_at_intersection, Intersection intersection) const;
+    Intersection operator()(const NodeID node_at_intersection,
+                            Intersection intersection,
+                            std::unordered_map<EdgeID, EdgeID> *merged_into = nullptr) const;
 
   private:
     const util::NodeBasedDynamicGraph &node_based_graph;
@@ -76,7 +79,8 @@ class IntersectionNormalizer
     // 160
     OSRM_ATTR_WARN_UNUSED
     Intersection MergeSegregatedRoads(const NodeID intersection_node,
-                                      Intersection intersection) const;
+                                      Intersection intersection,
+                                      std::unordered_map<EdgeID, EdgeID> *merged_into) const;
 
     // The counterpiece to mergeSegregatedRoads. While we can adjust roads that split up at the
     // intersection itself, it can also happen that intersections are connected to joining roads.

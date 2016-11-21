@@ -364,9 +364,9 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                             std::numeric_limits<std::uint32_t>::max());
 
     const auto generator = turn_analysis.GetIntersectionGenerator();
+    const auto normalizer = turn_analysis.GetIntersectionNormalizer();
     // going over all nodes (which form the center of an intersection), we compute all
-    // possible
-    // turns along these intersections.
+    // possible turns along these intersections.
     for (const auto node_at_center_of_intersection :
          util::irange(0u, m_node_based_graph->GetNumberOfNodes()))
     {
@@ -374,6 +374,10 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
         const auto intersection_shape =
             generator.ComputeIntersectionShape(node_at_center_of_intersection);
+
+        std::unordered_map<EdgeID, EdgeID> merging_map;
+        const auto merged_shape =
+            normalizer(node_at_center_of_intersection, intersection_shape, &merging_map);
 
         for (const EdgeID outgoing_edge :
              m_node_based_graph->GetAdjacentEdgeRange(node_at_center_of_intersection))
@@ -388,11 +392,64 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             ++node_based_edge_counter;
 
+            const auto intersection_with_flags_and_angles =
+                generator.AssignTurnAnglesAndValidTags(node_along_road_entering,
+                                                       incoming_edge,
+                                                       merged_shape,
+                                                       intersection_shape,
+                                                       merging_map);
+            const auto compare_intersection = turn_analysis.PostProcess(
+                node_along_road_entering, incoming_edge, intersection_with_flags_and_angles);
+
             auto intersection = turn_analysis.PostProcess(
                 node_along_road_entering,
                 incoming_edge,
                 generator.AssignTurnAnglesAndValidTags(
                     node_along_road_entering, incoming_edge, intersection_shape));
+
+            const auto print = [&]() {
+                std::cout << "[node] "
+                          << (util::Coordinate)m_node_info_list[node_at_center_of_intersection]
+                          << std::endl;
+                std::cout << "Original:\n";
+                for (auto road : intersection)
+                    std::cout << "\t" << toString(road) << std::endl;
+
+                std::cout << "Compare:\n";
+                for (auto road : compare_intersection)
+                    std::cout << "\t" << toString(road) << std::endl;
+            };
+
+            // compare intersections:
+            const auto compare_intersections = [&](const guidance::Intersection &orig,
+                                                   const guidance::Intersection &new_one) {
+                if (orig.size() != new_one.size())
+                {
+                    print();
+                    return false;
+                }
+                for (std::size_t i = 0; i < orig.size(); ++i)
+                {
+                    if (std::abs(orig[i].angle - new_one[i].angle) > 0.1 ||
+                        orig[i].entry_allowed != new_one[i].entry_allowed)
+                    {
+                        print();
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            if( !compare_intersections(intersection, compare_intersection) )
+            {
+                std::cout << "[shape]\n";
+                for( const auto road : intersection_shape )
+                    std::cout << "\t" << toString(road) << std::endl;
+
+                std::cout << "[merged-shape]\n";
+                for( const auto road : merged_shape )
+                    std::cout << "\t" << toString(road) << std::endl;
+            }
 
             BOOST_ASSERT(intersection.valid());
 
@@ -403,7 +460,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             // the entry class depends on the turn, so we have to classify the interesction for
             // every edge
-            const auto turn_classification = classifyIntersection(intersection);
+            const auto turn_classification = classifyIntersection(merged_shape);
 
             const auto entry_class_id = [&](const util::guidance::EntryClass entry_class) {
                 if (0 == entry_class_hash.count(entry_class))

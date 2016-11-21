@@ -69,6 +69,7 @@ class TurnAnalysis
     transformIntersectionIntoTurns(const Intersection &intersection) const;
 
     const IntersectionGenerator &GetIntersectionGenerator() const;
+    const IntersectionNormalizer &GetIntersectionNormalizer() const;
 
   private:
     const util::NodeBasedDynamicGraph &node_based_graph;

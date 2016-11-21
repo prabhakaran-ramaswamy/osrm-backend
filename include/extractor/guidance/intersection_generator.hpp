@@ -46,6 +46,12 @@ class IntersectionGenerator
     Intersection AssignTurnAnglesAndValidTags(const NodeID previous_node,
                                               const EdgeID entering_via_edge,
                                               Intersection intersection) const;
+    Intersection AssignTurnAnglesAndValidTags(const NodeID previous_node,
+                                              const EdgeID entering_via_edge,
+                                              Intersection normalised_intersection,
+                                              const Intersection &intersection,
+                                              const std::unordered_map<EdgeID,EdgeID> &merging_map) const;
+
 
     // Graph Compression cannot compress every setting. For example any barrier/traffic light cannot
     // be compressed. As a result, a simple road of the form `a ----- b` might end up as having an

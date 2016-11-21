@@ -22,11 +22,14 @@ IntersectionNormalizer::IntersectionNormalizer(
 {
 }
 
-Intersection IntersectionNormalizer::operator()(const NodeID node_at_intersection,
-                                                Intersection intersection) const
+Intersection IntersectionNormalizer::
+operator()(const NodeID node_at_intersection,
+           Intersection intersection,
+           std::unordered_map<EdgeID, EdgeID> *merged_into) const
 {
     return AdjustForJoiningRoads(
-        node_at_intersection, MergeSegregatedRoads(node_at_intersection, std::move(intersection)));
+        node_at_intersection,
+        MergeSegregatedRoads(node_at_intersection, std::move(intersection), merged_into));
 }
 
 // Checks for mergability of two ways that represent the same intersection. For further
@@ -108,7 +111,7 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
                      angularDeviation(intersection[other_index].angle, STRAIGHT_ANGLE)) <
             MAXIMAL_ALLOWED_NO_TURN_DEVIATION;
         */
-        return becomes_narrower;// || has_same_deviation;
+        return becomes_narrower; // || has_same_deviation;
     };
 
     const bool is_y_arm_first = isValidYArm(first_index, second_index);
@@ -180,8 +183,10 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
  * Anything containing the first u-turn in a merge affects all other angles
  * and is handled separately from all others.
  */
-Intersection IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
-                                                          Intersection intersection) const
+Intersection
+IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
+                                             Intersection intersection,
+                                             std::unordered_map<EdgeID, EdgeID> *merged_into) const
 {
     const auto getRight = [&](std::size_t index) {
         return (index + intersection.size() - 1) % intersection.size();
@@ -208,11 +213,21 @@ Intersection IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersect
         }
     };
 
-    const auto merge = [this, combineAngles](const ConnectedRoad &first,
-                                             const ConnectedRoad &second) -> ConnectedRoad {
+    const auto merge =
+        [this, combineAngles](const ConnectedRoad &first,
+                              const ConnectedRoad &second,
+                              std::unordered_map<EdgeID, EdgeID> *merged_into) -> ConnectedRoad {
         ConnectedRoad result = !node_based_graph.GetEdgeData(first.eid).reversed ? first : second;
         result.angle = combineAngles(first.angle, second.angle);
         result.bearing = combineAngles(first.bearing, second.bearing);
+
+        if (merged_into)
+        {
+            BOOST_ASSERT((merged_into->find(first.eid) == merged_into->end()) &&
+                         (merged_into->find(second.eid) == merged_into->end()));
+            (*merged_into)[first.eid] = result.eid;
+            (*merged_into)[second.eid] = result.eid;
+        }
         BOOST_ASSERT(0 <= result.angle && result.angle <= 360.0);
         BOOST_ASSERT(0 <= result.bearing && result.bearing <= 360.0);
         return result;
@@ -220,15 +235,6 @@ Intersection IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersect
 
     if (intersection.size() <= 1)
         return intersection;
-
-    const bool is_connected_to_roundabout = [this, &intersection]() {
-        for (const auto &road : intersection)
-        {
-            if (node_based_graph.GetEdgeData(road.eid).roundabout)
-                return true;
-        }
-        return false;
-    }();
 
     // check for merges including the basic u-turn
     // these result in an adjustment of all other angles. This is due to how these angles are
@@ -273,7 +279,7 @@ Intersection IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersect
 
         // FIXME if we have a left-sided country, we need to switch this off and enable it
         // below
-        intersection[0] = merge(intersection.front(), intersection.back());
+        intersection[0] = merge(intersection.front(), intersection.back(), merged_into);
         intersection[0].angle = 0;
         intersection.pop_back();
     }
@@ -284,24 +290,9 @@ Intersection IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersect
         const double correction_factor = (intersection[1].angle) / 2;
         for (std::size_t i = 2; i < intersection.size(); ++i)
             intersection[i].angle -= correction_factor;
-        intersection[0] = merge(intersection[0], intersection[1]);
+        intersection[0] = merge(intersection[0], intersection[1], merged_into);
         intersection[0].angle = 0;
         intersection.erase(intersection.begin() + 1);
-    }
-
-    if (merged_first && is_connected_to_roundabout)
-    {
-        /*
-         * We are merging a u-turn against the direction of a roundabout
-         *
-         *     -----------> roundabout
-         *        /    \
-         *     out      in
-         *
-         * These cases have to be disabled, even if they are not forbidden specifically by a
-         * relation
-         */
-        intersection[0].entry_allowed = false;
     }
 
     // a merge including the first u-turn requires an adjustment of the turn angles
@@ -311,7 +302,7 @@ Intersection IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersect
         if (CanMerge(intersection_node, intersection, index, getRight(index)))
         {
             intersection[getRight(index)] =
-                merge(intersection[getRight(index)], intersection[index]);
+                merge(intersection[getRight(index)], intersection[index], merged_into);
             intersection.erase(intersection.begin() + index);
             --index;
         }

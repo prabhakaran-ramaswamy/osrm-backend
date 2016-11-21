@@ -162,6 +162,11 @@ const IntersectionGenerator &TurnAnalysis::GetIntersectionGenerator() const
     return intersection_generator;
 }
 
+const IntersectionNormalizer &TurnAnalysis::GetIntersectionNormalizer() const
+{
+    return intersection_normalizer;
+}
+
 } // namespace guidance
 } // namespace extractor
 } // namespace osrm
