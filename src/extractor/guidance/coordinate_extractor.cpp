@@ -57,7 +57,9 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                                             const std::uint8_t intersection_lanes) const
 {
     const auto is_valid_result = [&](const util::Coordinate coordinate) {
-        return util::Coordinate(node_coordinates[intersection_node]) != coordinate;
+        return util::Coordinate(traversed_in_reverse
+                                    ? node_coordinates[to_node]
+                                    : node_coordinates[intersection_node]) != coordinate;
     };
 
     const auto considered_lanes =
@@ -107,12 +109,10 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // roundabouts, check early to avoid other costly checks
     if (turn_edge_data.roundabout)
     {
-        const auto result =
-            TrimCoordinatesToLength(std::move(coordinates),
-                                    distance_to_skip_over_due_to_coordinate_inaccuracies)
-                .back();
+        coordinates = TrimCoordinatesToLength(std::move(coordinates),
+                                              distance_to_skip_over_due_to_coordinate_inaccuracies);
         BOOST_ASSERT(is_valid_result(coordinates.back()));
-        return result;
+        return coordinates.back();
     }
 
     const util::Coordinate turn_coordinate =
@@ -207,8 +207,22 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // a lane as heuristic to determine if the road is straight enough.
     if (max_deviation_from_straight < 0.5 * ASSUMED_LANE_WIDTH)
     {
-        BOOST_ASSERT(is_valid_result(coordinates.back()));
-        return coordinates.back();
+        // At loops in traffic circles, we can have small deviations as well (if the circle is tiny)
+        // As a back-up, we have to check for this case
+        if (coordinates.front() == coordinates.back())
+        {
+            const auto result =
+                TrimCoordinatesToLength(std::move(coordinates),
+                                        distance_to_skip_over_due_to_coordinate_inaccuracies)
+                    .back();
+            BOOST_ASSERT(is_valid_result(coordinates.back()));
+            return result;
+        }
+        else
+        {
+            BOOST_ASSERT(is_valid_result(coordinates.back()));
+            return coordinates.back();
+        }
     }
 
     /*
@@ -413,6 +427,7 @@ CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID intersection_node,
                            std::back_inserter(result),
                            compressedGeometryToCoordinate);
             result.push_back(node_coordinates[intersection_node]);
+            // std::reverse(result.begin(), result.end());
         }
         else
         {

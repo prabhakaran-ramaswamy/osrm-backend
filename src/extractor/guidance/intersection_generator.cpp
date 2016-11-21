@@ -338,12 +338,16 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                 std::cout << "Params: " << from_node << " via: " << via_eid
                           << " Intersection: " << turn_node << " Dest: " << to_node << std::endl;
                 std::cout << "Angle does not match bearings: " << angle
-                          << " Expected: " << compare_angle << " In: " << uturn_bearing
-                          << " Out: " << bearing << " Coords: " << first_coordinate << " "
+                          << " Expected: " << compare_angle << " In: " << uturn_bearing << "\n"
+                          << " Out: " << bearing << " Coords (from,turn,to): " << first_coordinate << " "
                           << turn_coordinate << " " << third_coordinate << std::endl;
-                std::cout << "Direct Coordinates: " << util::Coordinate(node_info_list[turn_node])
-                          << " And: " << util::Coordinate(node_info_list[to_node]) << std::endl;
+                const auto first_coordinates = coordinate_extractor.GetCoordinatesAlongRoad(
+                        from_node, via_eid, INVERT, turn_node);
+                std::cout << "In Coordinates:";
+                for( const auto c: first_coordinates )
+                    std::cout << " " << c;
                 std::cout << std::endl;
+                std::cout << "From Bucket Reference: " << coordinate_extractor.compressed_geometries.HasEntryForID(via_eid) << std::endl;
                 assert(false);
             }
 

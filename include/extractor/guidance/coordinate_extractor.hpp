@@ -128,7 +128,7 @@ class CoordinateExtractor
                       const double length,
                       const double rate) const;
 
-  private:
+  public:
     const util::NodeBasedDynamicGraph &node_based_graph;
     const extractor::CompressedEdgeContainer &compressed_geometries;
     const std::vector<extractor::QueryNode> &node_coordinates;
