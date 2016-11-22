@@ -5,7 +5,7 @@ local set_classification = require("lib/guidance").set_classification
 local get_turn_lanes = require("lib/guidance").get_turn_lanes
 local Set = require('lib/set')
 local Sequence = require('lib/sequence')
-local TagHelper = require('lib/tag_helper')
+local Directional = require('lib/directional')
 
 -- Begin of globals
 barrier_whitelist = Set {
@@ -324,7 +324,7 @@ function handle_hov(way,result,data)
   end
 
   -- check if all lanes are hov only
-  local hov_lanes_forward, hov_lanes_backward = TagHelper.directional_values(way,'hov:lanes')
+  local hov_lanes_forward, hov_lanes_backward = Directional.get_values_by_key(way,'hov:lanes')
   local inaccessible_forward = has_all_designated_hov_lanes(hov_lanes_forward)
   local inaccessible_backward = has_all_designated_hov_lanes(hov_lanes_backward)
 
@@ -639,7 +639,7 @@ end
 -- maxspeed and advisory maxspeed
 function handle_maxspeed(way,result)
   local keys = Sequence { 'maxspeed:advisory', 'maxspeed' }
-  local forward, backward = TagHelper.pick_directional_values(way,keys)
+  local forward, backward = Directional.get_values_by_set(way,keys)
   forward = parse_maxspeed(forward)
   backward = parse_maxspeed(backward)
 

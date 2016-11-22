@@ -1,45 +1,4 @@
-local TagHelper = {}
-
--- return forward or backward value and key for a specific tag,
--- depending on is_forward.
--- e.g. for is_forward=true and maxspeed search:
---   maxspeed:forward
---   maxspeed
-
-function TagHelper.directional_key_value(way,is_forward,key)
-  local direction
-  if is_forward then
-    direction = 'forward'
-  else
-    direction = 'backward'
-  end
-  local directional_key = key .. ':' .. direction
-  local value = way:get_value_by_key(directional_key)
-  if value then
-    return directional_key, value
-  end
-  
-  value = way:get_value_by_key(key)
-  if value then
-    return key, value
-  end 
-end
-
--- return forward or backward value for a specific tag,
--- depending on is_forward.
--- e.g. for is_forward=true and maxspeed search:
---   maxspeed:forward
---   maxspeed
-
-function TagHelper.directional_value(way,is_forward,key)
-  local direction
-  if is_forward then
-    direction = 'forward'
-  else
-    direction = 'backward'
-  end
-  return way:get_value_by_key(key .. ':' .. direction) or way:get_value_by_key(key)
-end
+local Directional = {}
 
 -- return [forward,backward] values for a specific tag.
 -- e.g. for maxspeed search forward:
@@ -49,7 +8,7 @@ end
 --   maxspeed:backward
 --   maxspeed
 
-function TagHelper.directional_values(way,key)
+function Directional.get_values_by_key(way,key)
   local forward = way:get_value_by_key(key .. ':forward')
   local backward = way:get_value_by_key(key .. ':backward')
   
@@ -75,7 +34,7 @@ end
 --   advisory:backward
 --   advisory
 
-function TagHelper.pick_directional_values(way,keys)
+function Directional.get_values_by_set(way,keys)
   local forward, backward
   for i,key in ipairs(keys) do
     if not forward then
@@ -96,4 +55,4 @@ function TagHelper.pick_directional_values(way,keys)
   return forward, backward
 end
 
-return TagHelper
+return Directional

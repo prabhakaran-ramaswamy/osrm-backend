@@ -1,4 +1,4 @@
-local TagHelper = require('lib/tag_helper')
+local Directional = require('lib/directional')
 local Set = require('lib/set')
 
 local Guidance = {}
@@ -108,7 +108,7 @@ end
 
 -- returns forward,backward psv lane count
 local function get_psv_counts(way)
-  local psv_forward, psv_backward = TagHelper.directional_values(way,'lanes:psv')
+  local psv_forward, psv_backward = Directional.get_values_by_key(way,'lanes:psv')
   if psv_forward then
     psv_forward = tonumber(psv_forward)
   end
@@ -135,8 +135,8 @@ end
 -- this is broken for left-sided driving. It needs to switch left and right in case of left-sided driving
 function Guidance.get_turn_lanes(way)
   local psv_fw, psv_bw = get_psv_counts(way)
-  local turn_lanes_fw, turn_lanes_bw = TagHelper.directional_values(way,'turn:lanes')
-  local vehicle_lanes_fw, vehicle_lanes_bw = TagHelper.directional_values(way,'vehicle:lanes')
+  local turn_lanes_fw, turn_lanes_bw = Directional.get_values_by_key(way,'turn:lanes')
+  local vehicle_lanes_fw, vehicle_lanes_bw = Directional.get_values_by_key(way,'vehicle:lanes')
   
   --note: backward lanes swap psv_bw and psv_fw
   return process_lanes(turn_lanes_fw,vehicle_lanes_fw,psv_bw,psv_fw) or turn_lanes,
