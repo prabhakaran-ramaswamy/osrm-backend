@@ -50,6 +50,7 @@ IntersectionGenerator::ComputeIntersectionShape(const NodeID node_at_center_of_i
     // number of lanes at the intersection changes how far we look down the road
     const auto intersection_lanes =
         getLaneCountAtIntersection(node_at_center_of_intersection, node_based_graph);
+    std::cout << "Intersection" << std::endl;
     for (const EdgeID edge_connected_to_intersection :
          node_based_graph.GetAdjacentEdgeRange(node_at_center_of_intersection))
     {
@@ -65,6 +66,8 @@ IntersectionGenerator::ComputeIntersectionShape(const NodeID node_at_center_of_i
                                                         to_node,
                                                         intersection_lanes);
 
+        std::cout << "\tCoordinate: " << coordinate_along_edge_leaving << std::endl;
+
         bearing =
             util::coordinate_calculation::bearing(turn_coordinate, coordinate_along_edge_leaving);
 
@@ -78,6 +81,17 @@ IntersectionGenerator::ComputeIntersectionShape(const NodeID node_at_center_of_i
                                         {TurnType::Invalid, DirectionModifier::UTurn},
                                         INVALID_LANE_DATAID},
                           false));
+    }
+
+    if (!intersection.empty())
+    {
+        const auto base_bearing = util::bearing::reverseBearing(intersection.begin()->bearing);
+        std::sort(intersection.begin(),
+                  intersection.end(),
+                  [base_bearing](const ConnectedRoad &lhs, const ConnectedRoad &rhs) {
+                      return util::bearing::angleBetweenBearings(base_bearing, lhs.bearing) <
+                             util::bearing::angleBetweenBearings(base_bearing, rhs.bearing);
+                  });
     }
     return intersection;
 }

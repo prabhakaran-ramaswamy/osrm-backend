@@ -377,7 +377,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
         std::unordered_map<EdgeID, EdgeID> merging_map;
         const auto merged_shape =
-            normalizer(node_at_center_of_intersection, intersection_shape, &merging_map);
+            normalizer.process(node_at_center_of_intersection, intersection_shape, &merging_map);
 
         for (const EdgeID outgoing_edge :
              m_node_based_graph->GetAdjacentEdgeRange(node_at_center_of_intersection))
@@ -398,14 +398,11 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                                        merged_shape,
                                                        intersection_shape,
                                                        merging_map);
-            const auto compare_intersection = turn_analysis.PostProcess(
+
+            const auto compare_intersection = turn_analysis.assignTurnTypes(
                 node_along_road_entering, incoming_edge, intersection_with_flags_and_angles);
 
-            auto intersection = turn_analysis.PostProcess(
-                node_along_road_entering,
-                incoming_edge,
-                generator.AssignTurnAnglesAndValidTags(
-                    node_along_road_entering, incoming_edge, intersection_shape));
+            auto intersection = turn_analysis(node_along_road_entering, incoming_edge);
 
             const auto print = [&]() {
                 std::cout << "[node] "
@@ -440,14 +437,14 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 return true;
             };
 
-            if( !compare_intersections(intersection, compare_intersection) )
+            if (!compare_intersections(intersection, compare_intersection))
             {
                 std::cout << "[shape]\n";
-                for( const auto road : intersection_shape )
+                for (const auto road : intersection_shape)
                     std::cout << "\t" << toString(road) << std::endl;
 
                 std::cout << "[merged-shape]\n";
-                for( const auto road : merged_shape )
+                for (const auto road : merged_shape)
                     std::cout << "\t" << toString(road) << std::endl;
             }
 

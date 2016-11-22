@@ -50,6 +50,11 @@ class IntersectionNormalizer
                             Intersection intersection,
                             std::unordered_map<EdgeID, EdgeID> *merged_into = nullptr) const;
 
+    OSRM_ATTR_WARN_UNUSED
+    Intersection process(const NodeID node_at_intersection,
+                         Intersection intersection,
+                         std::unordered_map<EdgeID, EdgeID> *merged_into = nullptr) const;
+
   private:
     const util::NodeBasedDynamicGraph &node_based_graph;
     const std::vector<extractor::QueryNode> &node_coordinates;
@@ -96,6 +101,10 @@ class IntersectionNormalizer
     OSRM_ATTR_WARN_UNUSED
     Intersection AdjustForJoiningRoads(const NodeID node_at_intersection,
                                        Intersection intersection) const;
+
+    OSRM_ATTR_WARN_UNUSED
+    Intersection AdjustBearingsForMergeAtDestination(const NodeID node_at_intersection,
+                                                     Intersection intersection) const;
 };
 
 } // namespace guidance

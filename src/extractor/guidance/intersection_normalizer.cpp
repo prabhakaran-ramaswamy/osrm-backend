@@ -32,6 +32,15 @@ operator()(const NodeID node_at_intersection,
         MergeSegregatedRoads(node_at_intersection, std::move(intersection), merged_into));
 }
 
+Intersection IntersectionNormalizer::process(const NodeID node_at_intersection,
+                                             Intersection intersection,
+                                             std::unordered_map<EdgeID, EdgeID> *merged_into) const
+{
+    return AdjustBearingsForMergeAtDestination(
+        node_at_intersection,
+        MergeSegregatedRoads(node_at_intersection, std::move(intersection), merged_into));
+}
+
 // Checks for mergability of two ways that represent the same intersection. For further
 // information
 // see interface documentation in header.
@@ -48,7 +57,7 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
         return false;
 
     // need to be same name
-    if (second_data.name_id != EMPTY_NAMEID &&
+    if (second_data.name_id == EMPTY_NAMEID ||
         util::guidance::requiresNameAnnounced(
             first_data.name_id, second_data.name_id, name_table, street_name_suffix_table))
         return false;
@@ -151,8 +160,8 @@ bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
     // we only allow collapsing of a Y like fork. So the angle to the third index has to be
     // roughly equal:
     const auto y_angle_difference = angularDeviation(
-        angularDeviation(intersection[third_index].angle, intersection[first_index].angle),
-        angularDeviation(intersection[third_index].angle, intersection[second_index].angle));
+        angularDeviation(intersection[third_index].bearing, intersection[first_index].bearing),
+        angularDeviation(intersection[third_index].bearing, intersection[second_index].bearing));
     // Allow larger angles if its three roads only of the same name
     // This is a heuristic and might need to be revised.
     const bool assume_y_intersection =
@@ -207,7 +216,7 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
         {
             const auto offset = angularDeviation(first, second);
             auto new_angle = std::max(first, second) + .5 * offset;
-            if (new_angle > 360)
+            if (new_angle >= 360)
                 return new_angle - 360;
             return new_angle;
         }
@@ -220,7 +229,6 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
         ConnectedRoad result = !node_based_graph.GetEdgeData(first.eid).reversed ? first : second;
         result.angle = combineAngles(first.angle, second.angle);
         result.bearing = combineAngles(first.bearing, second.bearing);
-
         if (merged_into)
         {
             BOOST_ASSERT((merged_into->find(first.eid) == merged_into->end()) &&
@@ -228,8 +236,8 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
             (*merged_into)[first.eid] = result.eid;
             (*merged_into)[second.eid] = result.eid;
         }
-        BOOST_ASSERT(0 <= result.angle && result.angle <= 360.0);
-        BOOST_ASSERT(0 <= result.bearing && result.bearing <= 360.0);
+        BOOST_ASSERT(0 <= result.angle && result.angle < 360.0);
+        BOOST_ASSERT(0 <= result.bearing && result.bearing < 360.0);
         return result;
     };
 
@@ -273,25 +281,32 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
     {
         merged_first = true;
         // moving `a` to the left
-        const double correction_factor = (360 - intersection[intersection.size() - 1].angle) / 2;
-        for (std::size_t i = 1; i + 1 < intersection.size(); ++i)
-            intersection[i].angle += correction_factor;
+        const auto previous_bearing = intersection[0].bearing;
+        intersection[0] = merge(intersection.front(), intersection.back(), merged_into);
+        intersection[0].angle = 0;
+        const double correction_factor =
+            angularDeviation(intersection[0].bearing, previous_bearing);
+        // TODO remove
+        if( !merged_into )
+            for (std::size_t i = 1; i + 1 < intersection.size(); ++i)
+                intersection[i].angle += correction_factor;
 
         // FIXME if we have a left-sided country, we need to switch this off and enable it
         // below
-        intersection[0] = merge(intersection.front(), intersection.back(), merged_into);
-        intersection[0].angle = 0;
         intersection.pop_back();
     }
     else if (CanMerge(intersection_node, intersection, 0, 1))
     {
         merged_first = true;
-        // moving `a` to the right
-        const double correction_factor = (intersection[1].angle) / 2;
-        for (std::size_t i = 2; i < intersection.size(); ++i)
-            intersection[i].angle -= correction_factor;
-        intersection[0] = merge(intersection[0], intersection[1], merged_into);
+        const auto previous_bearing = intersection[0].bearing;
+        intersection[0] = merge(intersection.front(), intersection[1], merged_into);
         intersection[0].angle = 0;
+        const double correction_factor =
+            angularDeviation(intersection[0].bearing, previous_bearing);
+        // TODO remove
+        if( !merged_into )
+            for (std::size_t i = 2; i < intersection.size(); ++i)
+                intersection[i].angle -= correction_factor;
         intersection.erase(intersection.begin() + 1);
     }
 
@@ -308,9 +323,11 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
         }
     }
 
+    /*
     std::sort(std::begin(intersection),
               std::end(intersection),
               std::mem_fn(&ConnectedRoad::compareByAngle));
+    */
     return intersection;
 }
 
@@ -343,7 +360,7 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
 
     const util::Coordinate coordinate_at_intersection = node_coordinates[node_at_intersection];
     // never adjust u-turns
-    for (std::size_t index = 1; index < intersection.size(); ++index)
+    for (std::size_t index = 0; index < intersection.size(); ++index)
     {
         auto &road = intersection[index];
         // to find out about the above situation, we need to look at the next intersection (at d in
@@ -401,11 +418,130 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
             const auto offset =
                 get_offset(next_intersection_along_road[0], next_intersection_along_road[1]);
 
-            const auto corrected_offset =
-                get_corrected_offset(offset, road, intersection[(index + 1) % intersection.size()]);
+            const auto corrected_offset = get_corrected_offset(
+                offset,
+                road,
+                intersection[(intersection.size() + index - 1) % intersection.size()]);
             // at the target intersection, we merge to the right, so we need to shift the current
             // angle to the left
-            road.angle = adjustAngle(road.angle, corrected_offset);
+
+            road.bearing = adjustAngle(road.bearing, corrected_offset);
+            if (index == 0)
+            {
+                for (std::size_t i = 1; i < intersection.size(); ++i)
+                {
+                    intersection[i].angle += corrected_offset;
+                }
+            }
+            else
+            {
+                road.angle = adjustAngle(road.angle, -corrected_offset);
+            }
+        }
+        else if (CanMerge(node_at_next_intersection,
+                          next_intersection_along_road,
+                          0,
+                          next_intersection_along_road.size() - 1))
+        {
+            const auto offset =
+                get_offset(next_intersection_along_road[0],
+                           next_intersection_along_road[next_intersection_along_road.size() - 1]);
+
+            const auto corrected_offset =
+                get_corrected_offset(offset, road, intersection[(index + 1) % intersection.size()]);
+            // at the target intersection, we merge to the left, so we need to shift the current
+            // angle to the right
+            road.bearing = adjustAngle(road.bearing, -corrected_offset);
+            if (index == 0)
+            {
+                for (std::size_t i = 1; i < intersection.size(); ++i)
+                {
+                    intersection[i].angle -= corrected_offset;
+                }
+            }
+            else
+            {
+                road.angle = adjustAngle(road.angle, corrected_offset);
+            }
+        }
+    }
+    return intersection;
+}
+
+Intersection
+IntersectionNormalizer::AdjustBearingsForMergeAtDestination(const NodeID node_at_intersection,
+                                                            Intersection intersection) const
+{
+    // nothing to do for dead ends
+    if (intersection.size() <= 1)
+        return intersection;
+
+    const util::Coordinate coordinate_at_intersection = node_coordinates[node_at_intersection];
+    // never adjust u-turns
+    for (std::size_t index = 0; index < intersection.size(); ++index)
+    {
+        auto &road = intersection[index];
+        // to find out about the above situation, we need to look at the next intersection (at d in
+        // the example). If the initial road can be merged to the left/right, we are about to adjust
+        // the angle.
+        const auto next_intersection_along_road =
+            intersection_generator(node_at_intersection, road.eid);
+
+        if (next_intersection_along_road.size() <= 1)
+            continue;
+
+        const auto node_at_next_intersection = node_based_graph.GetTarget(road.eid);
+        const util::Coordinate coordinate_at_next_intersection =
+            node_coordinates[node_at_next_intersection];
+        if (util::coordinate_calculation::haversineDistance(coordinate_at_intersection,
+                                                            coordinate_at_next_intersection) > 30)
+            continue;
+
+        const auto adjustAngle = [](double angle, double offset) {
+            angle += offset;
+            if (angle > 360)
+                return angle - 360.;
+            else if (angle < 0)
+                return angle + 360.;
+            return angle;
+        };
+
+        const auto range = node_based_graph.GetAdjacentEdgeRange(node_at_next_intersection);
+        if (range.size() <= 1)
+            continue;
+
+        // the order does not matter
+        const auto get_offset = [](const ConnectedRoad &lhs, const ConnectedRoad &rhs) {
+            return 0.5 * angularDeviation(lhs.bearing, rhs.bearing);
+        };
+
+        // When offsetting angles in our turns, we don't want to get past the next turn. This
+        // function simply limits an offset to be at most half the distance to the next turn in the
+        // offfset direction
+        const auto get_corrected_offset = [](const double offset,
+                                             const ConnectedRoad &road,
+                                             const ConnectedRoad &next_road_in_offset_direction) {
+            const auto offset_limit =
+                angularDeviation(road.bearing, next_road_in_offset_direction.bearing);
+            // limit the offset with an additional buffer
+            return (offset + MAXIMAL_ALLOWED_NO_TURN_DEVIATION > offset_limit) ? 0.5 * offset_limit
+                                                                               : offset;
+        };
+
+        // check if the u-turn edge at the next intersection could be merged to the left/right. If
+        // this is the case and the road is not far away (see previous distance check), if
+        // influences the perceived angle.
+        if (CanMerge(node_at_next_intersection, next_intersection_along_road, 0, 1))
+        {
+            const auto offset =
+                get_offset(next_intersection_along_road[0], next_intersection_along_road[1]);
+
+            const auto corrected_offset = get_corrected_offset(
+                offset,
+                road,
+                intersection[(intersection.size() + index - 1) % intersection.size()]);
+            // at the target intersection, we merge to the right, so we need to shift the current
+            // angle to the left
             road.bearing = adjustAngle(road.bearing, corrected_offset);
         }
         else if (CanMerge(node_at_next_intersection,
@@ -418,10 +554,9 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
                            next_intersection_along_road[next_intersection_along_road.size() - 1]);
 
             const auto corrected_offset =
-                get_corrected_offset(offset, road, intersection[index - 1]);
+                get_corrected_offset(offset, road, intersection[(index + 1) % intersection.size()]);
             // at the target intersection, we merge to the left, so we need to shift the current
             // angle to the right
-            road.angle = adjustAngle(road.angle, -corrected_offset);
             road.bearing = adjustAngle(road.bearing, -corrected_offset);
         }
     }
