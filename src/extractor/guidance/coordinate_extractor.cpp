@@ -313,7 +313,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                 considered_lanes * 0.5 * ASSUMED_LANE_WIDTH,
                 turn_edge_data))
     {
-        if (segment_distances.back() <= distance_to_skip_over_due_to_coordinate_inaccuracies)
+        if (total_distance <= distance_to_skip_over_due_to_coordinate_inaccuracies)
             return coordinates.back();
         /*
          * In curves we now have to distinguish between larger curves and tiny curves modelling the

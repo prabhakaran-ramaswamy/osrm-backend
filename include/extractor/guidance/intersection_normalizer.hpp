@@ -65,8 +65,14 @@ class IntersectionNormalizer
 
     // check if two indices in an intersection can be seen as a single road in the perceived
     // intersection representation. See below for an example. Utility function for
-    // MergeSegregatedRoads
+    // MergeSegregatedRoads. It also checks for neighboring merges
     bool CanMerge(const NodeID intersection_node,
+                  const Intersection &intersection,
+                  std::size_t first_index,
+                  std::size_t second_index) const;
+
+    // A tool called by CanMerge
+    bool InnerCanMerge(const NodeID intersection_node,
                   const Intersection &intersection,
                   std::size_t first_index,
                   std::size_t second_index) const;

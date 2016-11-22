@@ -41,25 +41,56 @@ Intersection IntersectionNormalizer::process(const NodeID node_at_intersection,
         MergeSegregatedRoads(node_at_intersection, std::move(intersection), merged_into));
 }
 
-// Checks for mergability of two ways that represent the same intersection. For further
-// information
-// see interface documentation in header.
-bool IntersectionNormalizer::CanMerge(const NodeID node_at_intersection,
+bool IntersectionNormalizer::CanMerge(const NodeID intersection_node,
                                       const Intersection &intersection,
                                       std::size_t first_index,
                                       std::size_t second_index) const
+{
+    BOOST_ASSERT(((first_index + 1) % intersection.size()) == second_index);
+    if (!InnerCanMerge(intersection_node, intersection, first_index, second_index))
+        return false;
+
+    const auto can_merge_right =
+        InnerCanMerge(intersection_node,
+                      intersection,
+                      second_index,
+                      (second_index + 1) % intersection.size()) ||
+        InnerCanMerge(intersection_node,
+                      intersection,
+                      second_index,
+                      (first_index + intersection.size() - 1) % intersection.size());
+    const auto can_merge_left =
+        InnerCanMerge(intersection_node,
+                      intersection,
+                      (first_index + intersection.size() - 1) % intersection.size(),
+                      first_index) ||
+        InnerCanMerge(
+            intersection_node, intersection, first_index, (second_index + 1) % intersection.size());
+    return !can_merge_left && !can_merge_right;
+}
+
+// Checks for mergability of two ways that represent the same intersection. For further
+// information
+// see interface documentation in header.
+bool IntersectionNormalizer::InnerCanMerge(const NodeID node_at_intersection,
+                                           const Intersection &intersection,
+                                           std::size_t first_index,
+                                           std::size_t second_index) const
 {
     const auto &first_data = node_based_graph.GetEdgeData(intersection[first_index].eid);
     const auto &second_data = node_based_graph.GetEdgeData(intersection[second_index].eid);
 
     // only merge named ids
-    if (first_data.name_id == EMPTY_NAMEID)
+    if (first_data.name_id == EMPTY_NAMEID || second_data.name_id == EMPTY_NAMEID)
         return false;
 
     // need to be same name
-    if (second_data.name_id == EMPTY_NAMEID ||
-        util::guidance::requiresNameAnnounced(
+    if (util::guidance::requiresNameAnnounced(
             first_data.name_id, second_data.name_id, name_table, street_name_suffix_table))
+        return false;
+    // needs to be symmetrical for names
+    if (util::guidance::requiresNameAnnounced(
+            second_data.name_id, first_data.name_id, name_table, street_name_suffix_table))
         return false;
 
     // compatibility is required
@@ -277,7 +308,7 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
     // the difference to all angles. Otherwise we subtract it.
     bool merged_first = false;
     // these result in an adjustment of all other angles
-    if (CanMerge(intersection_node, intersection, 0, intersection.size() - 1))
+    if (CanMerge(intersection_node, intersection, intersection.size() - 1, 0))
     {
         merged_first = true;
         // moving `a` to the left
@@ -287,7 +318,7 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
         const double correction_factor =
             angularDeviation(intersection[0].bearing, previous_bearing);
         // TODO remove
-        if( !merged_into )
+        if (!merged_into)
             for (std::size_t i = 1; i + 1 < intersection.size(); ++i)
                 intersection[i].angle += correction_factor;
 
@@ -304,7 +335,7 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
         const double correction_factor =
             angularDeviation(intersection[0].bearing, previous_bearing);
         // TODO remove
-        if( !merged_into )
+        if (!merged_into)
             for (std::size_t i = 2; i < intersection.size(); ++i)
                 intersection[i].angle -= correction_factor;
         intersection.erase(intersection.begin() + 1);
@@ -314,7 +345,7 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
     // therefore these are handled prior to this step
     for (std::size_t index = 2; index < intersection.size(); ++index)
     {
-        if (CanMerge(intersection_node, intersection, index, getRight(index)))
+        if (CanMerge(intersection_node, intersection, getRight(index), index))
         {
             intersection[getRight(index)] =
                 merge(intersection[getRight(index)], intersection[index], merged_into);
@@ -440,8 +471,8 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
         }
         else if (CanMerge(node_at_next_intersection,
                           next_intersection_along_road,
-                          0,
-                          next_intersection_along_road.size() - 1))
+                          next_intersection_along_road.size() - 1,
+                          0))
         {
             const auto offset =
                 get_offset(next_intersection_along_road[0],
@@ -546,8 +577,8 @@ IntersectionNormalizer::AdjustBearingsForMergeAtDestination(const NodeID node_at
         }
         else if (CanMerge(node_at_next_intersection,
                           next_intersection_along_road,
-                          0,
-                          next_intersection_along_road.size() - 1))
+                          next_intersection_along_road.size() - 1,
+                          0))
         {
             const auto offset =
                 get_offset(next_intersection_along_road[0],
