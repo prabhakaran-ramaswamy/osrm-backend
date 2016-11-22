@@ -50,7 +50,7 @@ IntersectionGenerator::ComputeIntersectionShape(const NodeID node_at_center_of_i
     // number of lanes at the intersection changes how far we look down the road
     const auto intersection_lanes =
         getLaneCountAtIntersection(node_at_center_of_intersection, node_based_graph);
-    std::cout << "Intersection" << std::endl;
+
     for (const EdgeID edge_connected_to_intersection :
          node_based_graph.GetAdjacentEdgeRange(node_at_center_of_intersection))
     {
@@ -65,8 +65,6 @@ IntersectionGenerator::ComputeIntersectionShape(const NodeID node_at_center_of_i
                                                         !INVERT,
                                                         to_node,
                                                         intersection_lanes);
-
-        std::cout << "\tCoordinate: " << coordinate_along_edge_leaving << std::endl;
 
         bearing =
             util::coordinate_calculation::bearing(turn_coordinate, coordinate_along_edge_leaving);

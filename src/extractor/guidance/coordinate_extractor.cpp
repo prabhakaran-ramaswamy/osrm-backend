@@ -74,7 +74,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // Fallback. These roads are small broken self-loops that shouldn't be in the data at all
     if (intersection_node == to_node)
     {
-        std::cout << "First" << std::endl;
         return coordinates[1];
     }
 
@@ -86,7 +85,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     {
         // Here we can't check for validity, due to possible dead-ends with repeated coordinates
         // BOOST_ASSERT(is_valid_result(coordinates.back()));
-        std::cout << "Last One" << std::endl;
         return coordinates.back();
     }
 
@@ -101,7 +99,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
             TrimCoordinatesToLength(std::move(coordinates),
                                     distance_to_skip_over_due_to_coordinate_inaccuracies)
                 .back();
-        std::cout << "Local" << std::endl;
         BOOST_ASSERT(is_valid_result(coordinates.back()));
         return result;
     }
@@ -119,7 +116,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         coordinates = TrimCoordinatesToLength(std::move(coordinates),
                                               distance_to_skip_over_due_to_coordinate_inaccuracies);
         BOOST_ASSERT(is_valid_result(coordinates.back()));
-        std::cout << "Roundabout" << std::endl;
         return coordinates.back();
     }
 
@@ -140,7 +136,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
             util::coordinate_calculation::haversineDistance(turn_coordinate, coordinates[1]) <
                 ASSUMED_LANE_WIDTH)
         {
-            std::cout << "Low Priority" << std::endl;
             const auto result =
                 GetCorrectedCoordinate(turn_coordinate, coordinates[1], coordinates.back());
             BOOST_ASSERT(is_valid_result(result));
@@ -148,7 +143,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         }
         else
         {
-            std::cout << "Low Priority" << std::endl;
             BOOST_ASSERT(is_valid_result(coordinates.back()));
             return coordinates.back();
         }
@@ -170,7 +164,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
 
     if (first_coordinate_is_far_away)
     {
-        std::cout << "First" << std::endl;
         BOOST_ASSERT(is_valid_result(coordinates[1]));
         return coordinates[1];
     }
@@ -208,7 +201,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     if (coordinates.size() == 2 ||
         segment_distances.back() <= distance_to_skip_over_due_to_coordinate_inaccuracies)
     {
-        std::cout << "Segment Distance or Size" << std::endl;
         BOOST_ASSERT(is_valid_result(coordinates.back()));
         return coordinates.back();
     }
@@ -220,7 +212,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     // a lane as heuristic to determine if the road is straight enough.
     if (max_deviation_from_straight < 0.5 * ASSUMED_LANE_WIDTH)
     {
-        std::cout << "Little Deviation" << std::endl;
         // At loops in traffic circles, we can have small deviations as well (if the circle is tiny)
         // As a back-up, we have to check for this case
         if (coordinates.front() == coordinates.back())
@@ -322,7 +313,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                 considered_lanes * 0.5 * ASSUMED_LANE_WIDTH,
                 turn_edge_data))
     {
-        std::cout << "Selecting Curve Segment" << std::endl;
         if (segment_distances.back() <= distance_to_skip_over_due_to_coordinate_inaccuracies)
             return coordinates.back();
         /*
@@ -444,7 +434,6 @@ CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID intersection_node,
                            std::back_inserter(result),
                            compressedGeometryToCoordinate);
             result.push_back(node_coordinates[intersection_node]);
-            // std::reverse(result.begin(), result.end());
         }
         else
         {
@@ -715,15 +704,16 @@ CoordinateExtractor::PrepareLengthCache(const std::vector<util::Coordinate> &coo
     segment_distances.push_back(0);
     // sentinel
     auto last_coordinate = coordinates.front();
+    double last_distance = 0;
     std::find_if(
         std::next(std::begin(coordinates)),
         std::end(coordinates),
-        [&last_coordinate, limit, &segment_distances](const util::Coordinate current_coordinate) {
-            const auto distance = util::coordinate_calculation::haversineDistance(
+        [&last_coordinate, limit, &segment_distances,&last_distance](const util::Coordinate current_coordinate) {
+            last_distance += util::coordinate_calculation::haversineDistance(
                 last_coordinate, current_coordinate);
             last_coordinate = current_coordinate;
-            segment_distances.push_back(distance);
-            return distance >= limit;
+            segment_distances.push_back(last_distance);
+            return last_distance >= limit;
         });
     return segment_distances;
 }
