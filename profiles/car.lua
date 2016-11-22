@@ -437,14 +437,8 @@ function handle_speed(way,result,data)
     local max_speed = parse_maxspeed( way:get_value_by_key("maxspeed") )
     -- Set the avg speed on the way if it is accessible by road class
     if highway_speed then
-      if max_speed and max_speed > highway_speed then
-        result.forward_speed = max_speed
-        result.backward_speed = max_speed
-        -- max_speed = math.huge
-      else
-        result.forward_speed = highway_speed
-        result.backward_speed = highway_speed
-      end
+      result.forward_speed = highway_speed
+      result.backward_speed = highway_speed
     else
       -- Set the avg speed on ways that are marked accessible
       if access_tag_whitelist[data.access] then
@@ -452,11 +446,6 @@ function handle_speed(way,result,data)
         result.backward_speed = speed_profile["default"]
       end
     end
-    if 0 == max_speed then
-      max_speed = math.huge
-    end
-    result.forward_speed = min(result.forward_speed, max_speed)
-    result.backward_speed = min(result.backward_speed, max_speed)
   end
 
   if -1 == result.forward_speed and -1 == result.backward_speed then
@@ -731,9 +720,6 @@ function way_function(way, result)
   if handle_roundabouts(way,result) == false then return end
   if handle_startpoint(way,result) == false then return end
   if handle_restricted(way,result,data) == false then return end
-
-  -- handle roundabout flags
-  if handle_roundabouts(way,result) == false then return end
 
   -- check if this way can be routed through, but not used as
   -- origin or destination
