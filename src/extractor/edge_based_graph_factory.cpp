@@ -392,18 +392,19 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             ++node_based_edge_counter;
 
-            const auto intersection_with_flags_and_angles =
+            auto intersection_with_flags_and_angles =
                 generator.AssignTurnAnglesAndValidTags(node_along_road_entering,
                                                        incoming_edge,
                                                        merged_shape,
                                                        intersection_shape,
                                                        merging_map);
 
-            const auto compare_intersection = turn_analysis.assignTurnTypes(
-                node_along_road_entering, incoming_edge, intersection_with_flags_and_angles);
+            auto intersection = turn_analysis.assignTurnTypes(
+                node_along_road_entering, incoming_edge, std::move(intersection_with_flags_and_angles));
 
-            auto intersection = turn_analysis(node_along_road_entering, incoming_edge);
+            //auto intersection = turn_analysis(node_along_road_entering, incoming_edge);
 
+            /*
             const auto print = [&]() {
                 std::cout << "[node] "
                           << (util::Coordinate)m_node_info_list[node_at_center_of_intersection]
@@ -447,7 +448,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 for (const auto road : merged_shape)
                     std::cout << "\t" << toString(road) << std::endl;
             }
-
+            */
             BOOST_ASSERT(intersection.valid());
 
             intersection = turn_lane_handler.assignTurnLanes(
