@@ -29,17 +29,14 @@ using RTreeLeaf = extractor::EdgeBasedNode;
 using BenchStaticRTree =
     util::StaticRTree<RTreeLeaf, util::ShM<util::Coordinate, false>::vector, false>;
 
-std::vector<util::Coordinate> loadCoordinates(const boost::filesystem::path &nodes_file)
+std::vector<util::Coordinate> loadCoordinates(storage::io::FileReader &file_reader)
 {
-    boost::filesystem::ifstream nodes_input_stream(nodes_file, std::ios::binary);
-
     extractor::QueryNode current_node;
-    unsigned coordinate_count = 0;
-    nodes_input_stream.read((char *)&coordinate_count, sizeof(unsigned));
+    unsigned coordinate_count = file_reader.ReadElementCount32();
     std::vector<util::Coordinate> coords(coordinate_count);
     for (unsigned i = 0; i < coordinate_count; ++i)
     {
-        nodes_input_stream.read((char *)&current_node, sizeof(extractor::QueryNode));
+        file_reader.ReadInto(&current_node, 1);
         coords[i] = util::Coordinate(current_node.lon, current_node.lat);
     }
     return coords;
