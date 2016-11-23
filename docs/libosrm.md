@@ -20,14 +20,14 @@ Take a look at the example code that lives in the [example directory](https://gi
 
 - [Parameters for other services](https://github.com/Project-OSRM/osrm-backend/tree/master/include/engine/api) - here are all other `*Parameters` you need for other Routing Machine services.
 
-- [JSON](https://github.com/Project-OSRM/osrm-backend/blob/master/include/util/json_container.hpp) - this is a sum type resembling JSON. The Routing Machine service functions take a out-ref to a JSON result and fill it accordingly. It is currently implemented using [mapbox/variant](https://github.com/mapbox/variant) which is similar to [Boost.Variant](http://www.boost.org/doc/libs/1_55_0/doc/html/variant.html) (Boost documentation is great). There are two ways to work with this sum type: either provide a visitor that acts on each type on visitation or use the `get` function in case you're sure about the structure. The JSON structure is written down in the [HTTP API](#http-api).
+- [JSON](https://github.com/Project-OSRM/osrm-backend/blob/master/include/util/json_container.hpp) - this is a sum type resembling JSON. The Routing Machine service functions take a out-ref to a JSON result and fill it accordingly. It is currently implemented using [mapbox/variant](https://github.com/mapbox/variant) which is similar to [Boost.Variant](http://www.boost.org/doc/libs/1_55_0/doc/html/variant.html). There are two ways to work with this sum type: either provide a visitor that acts on each type on visitation or use the `get` function in case you're sure about the structure. The JSON structure is written down in the [HTTP API](#http-api).
 
 ## Example
 
 See [the example folder](https://github.com/Project-OSRM/osrm-backend/tree/master/example) in the OSRM repository.
 
-## Summary 
+## Workflow
 
- - create an `OSRM` instance initialized with a `EngineConfig`
- - call the service function on the `OSRM` object providing service specific `*Parameters`
- - check the return code and use the JSON result
+ - Create an `OSRM` instance initialized with a `EngineConfig`
+ - Call the service function on the `OSRM` object providing service specific `*Parameters`
+ - Check the return code and use the JSON result

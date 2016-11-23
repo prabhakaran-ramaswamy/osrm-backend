@@ -1,21 +1,8 @@
-## Environment Variables
-
-### SIGNAL_PARENT_WHEN_READY
-
-If the SIGNAL_PARENT_WHEN_READY environment variable is set osrm-routed will
-send the USR1 signal to its parent when it will be running and waiting for
-requests. This could be used to upgrade osrm-routed to a new binary on the fly
-without any service downtime - no incoming requests will be lost.
-
-### DISABLE_ACCESS_LOGGING
-
-If the DISABLE_ACCESS_LOGGING environment variable is set osrm-routed will
-**not** log any http requests to standard output. This can be useful in high
-traffic setup.
-
 ## General options
 
-All OSRM HTTP requests use a common structure.  The following syntax applies to all services, except as noted.
+All OSRM HTTP requests use a common structure.
+
+The following syntax applies to all services, except as noted.
 
 ### Requests
 
@@ -31,22 +18,23 @@ GET /{service}/{version}/{profile}/{coordinates}[.{format}]?option=value&option=
 | `coordinates`| String of format `{longitude},{latitude};{longitude},{latitude}[;{longitude},{latitude} ...]` or `polyline({polyline})`. |
 | `format`| Only `json` is supported at the moment. This parameter is optional and defaults to `json`. |
 
-Passing any `option=value` is optional. `polyline` follows Google's polyline format with precision 5 and can be generated using [this package](https://www.npmjs.com/package/polyline).
+Passing any `option=value` is optional. `polyline` follows Google's polyline format with precision 5 by default and can be generated using [this package](https://www.npmjs.com/package/polyline).
+
 To pass parameters to each location some options support an array like encoding:
 
 **Request options**
 
-| Option     | Values                                                 | Description                                      |
-|------------|--------------------------------------------------------|--------------------------------------------------|
+| Option     | Values                                                 | Description                                                                                           |
+|------------|--------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
 |bearings    |`{bearing};{bearing}[;{bearing} ...]`                   |Limits the search to segments with given bearing in degrees towards true north in clockwise direction. |
-|radiuses    |`{radius};{radius}[;{radius} ...]`                      |Limits the search to given radius in meters.      |
-|hints       |`{hint};{hint}[;{hint} ...]`                            |Hint to derive position in street network.        |
+|radiuses    |`{radius};{radius}[;{radius} ...]`                      |Limits the search to given radius in meters.                                                           |
+|hints       |`{hint};{hint}[;{hint} ...]`                            |Hint from previous request to derive position in street network.                                       |
 
 Where the elements follow the following format:
 
 | Element    | Values                                                 |
 |------------|--------------------------------------------------------|
-|bearing     |`{value},{range}` `integer 0 .. 360,integer 0 .. 180`  |
+|bearing     |`{value},{range}` `integer 0 .. 360,integer 0 .. 180`   |
 |radius      |`double >= 0` or `unlimited` (default)                  |
 |hint        |Base64 `string`                                         |
 
@@ -64,7 +52,6 @@ Example: 2nd location use the default value for `option`:
 
 #### Example Requests
 
-
 ```curl
 # Query on Berlin with three coordinates:
 curl 'http://router.project-osrm.org/route/v1/driving/13.388860,52.517037;13.397634,52.529407;13.428555,52.523219?overview=false'
@@ -75,18 +62,7 @@ curl 'http://router.project-osrm.org/route/v1/driving/polyline(ofp_Ik_vpAilAyu@t
 
 ### Responses
 
-Every response object has a `code` field.
-
-#### Example response
-
-```json
-{
-"code": "Ok",
-"message": "Everything worked"
-}
-```
-
-Where `code` is on one of the strings below or service dependent:
+Every response object has a `code` field containing one of the strings below or a service dependent code:
 
 | Type              | Description                                                                      |
 |-------------------|----------------------------------------------------------------------------------|
@@ -100,15 +76,24 @@ Where `code` is on one of the strings below or service dependent:
 | `NoSegment`       | One of the supplied input coordinates could not snap to street segment.          |
 | `TooBig`          | The request size violates one of the service specific request size restrictions. |
 
-`message` is a **optional** human-readable error message. All other status types are service dependent.
+- `message` is a **optional** human-readable error message. All other status types are service dependent.
+- In case of an error the HTTP status code will be `400`. Otherwise the HTTP status code will be `200` and `code` will be `Ok`.
 
-In case of an error the HTTP status code will be `400`. Otherwise the HTTP status code will be `200` and `code` will be `Ok`.
+#### Example response
+
+```json
+{
+"code": "Ok",
+"message": "Everything worked"
+}
+```
+
 
 ## Services
 
-### Nearest service
+### Nearest
 
-Snaps a coordinate to the street network and returns the nearest n matches.
+Snaps a coordinate to the street network and returns the nearest `n` matches.
 
 ```endpoint
 GET http://{server}/nearest/v1/{profile}/{coordinates}.json?number={number}
@@ -172,7 +157,7 @@ curl 'http://router.project-osrm.org/nearest/v1/driving/13.388860,52.517037?numb
 }
 ```
 
-### Route service
+### Route
 
 Finds the fastest route between coordinates in the supplied order.
 
@@ -189,7 +174,7 @@ In addition to the [general options](#general-options) the following options are
 |annotations |`true`, `false` (default)                    |Returns additional metadata for each coordinate along the route geometry.      |
 |geometries  |`polyline` (default), `polyline6`, `geojson` |Returned route geometry format (influences overview and per step)              |
 |overview    |`simplified` (default), `full`, `false`      |Add overview geometry either full, simplified according to highest zoom level it could be display on, or not at all.|
-|continue_straight |`default` (default), `true`, `false`   |Forces the route to keep going straight at waypoints and don't do a uturn even if it would be faster. Default value depends on the profile. |
+|continue\_straight |`default` (default), `true`, `false`   |Forces the route to keep going straight at waypoints constraining uturns there even if it would be faster. Default value depends on the profile. |
 
 \* Please note that even if an alternative route is requested, a result cannot be guaranteed.
 
@@ -214,7 +199,7 @@ All other fields might be undefined.
 curl 'http://router.project-osrm.org/route/v1/driving/13.388860,52.517037;13.397634,52.529407;13.428555,52.523219?overview=false'
 ```
 
-### Table service
+### Table
 
 Computes the duration of the fastest route between all pairs of supplied coordinates.
 
@@ -273,10 +258,10 @@ In case of error the following `code`s are supported in addition to the general 
 
 All other fields might be undefined.
 
-### Match service
+### Match
 
 Map matching matches/snaps given GPS points to the road network in the most plausible way.
-Please note the request might result multiple sub-traces. Large jumps in the timestamps (>60s) or improbable transitions lead to trace splits if a complete matching could not be found.
+Please note the request might result multiple sub-traces. Large jumps in the timestamps (> 60s) or improbable transitions lead to trace splits if a complete matching could not be found.
 The algorithm might not be able to match all points. Outliers are removed if they can not be matched successfully.
 
 ```endpoint
@@ -291,19 +276,18 @@ In addition to the [general options](#general-options) the following options are
 |geometries  |`polyline` (default), `polyline6`, `geojson`    |Returned route geometry format (influences overview and per step)                         |
 |annotations |`true`, `false` (default)                       |Returns additional metadata for each coordinate along the route geometry.                 |
 |overview    |`simplified` (default), `full`, `false`         |Add overview geometry either full, simplified according to highest zoom level it could be display on, or not at all.|
-|timestamps  |`{timestamp};{timestamp}[;{timestamp} ...]`     |Timestamp of the input location. Timestamps need to be monotonically increasing.          |
+|timestamps  |`{timestamp};{timestamp}[;{timestamp} ...]`     |Timestamps for the input locations in seconds since UNIX epoch. Timestamps need to be monotonically increasing. |
 |radiuses    |`{radius};{radius}[;{radius} ...]`              |Standard deviation of GPS precision used for map matching. If applicable use GPS accuracy.|
 
-|Parameter   |Values                        |
-|------------|------------------------------|
-|timestamp   |`integer` UNIX-like timestamp |
-|radius      |`double >= 0` (default 5m)    |
+|Parameter   |Values                             |
+|------------|-----------------------------------|
+|timestamp   |`integer` seconds since UNIX epoch |
+|radius      |`double >= 0` (default 5m)         |
 
-The radius for each point should be the standard error of the location, measured in meters from the true location. Use
-`Location.getAccuracy()` on Android or `CLLocation.horizontalAccuracy` on iOS. This value is used to determine which
-points should be considered as candidates (larger radius means more candidates) and how likely each candidate is (larger
-radius means far-away candidates are penalized less). The area to search is chosen such that the correct candidate
-should be considered 99.9% of the time (for more details, see https://github.com/Project-OSRM/osrm-backend/pull/3184).
+The radius for each point should be the standard error of the location measured in meters from the true location.
+Use `Location.getAccuracy()` on Android or `CLLocation.horizontalAccuracy` on iOS.
+This value is used to determine which points should be considered as candidates (larger radius means more candidates) and how likely each candidate is (larger radius means far-away candidates are penalized less).
+The area to search is chosen such that the correct candidate should be considered 99.9% of the time (for more details see [this ticket](https://github.com/Project-OSRM/osrm-backend/pull/3184)).
 
 **Response**
 
@@ -324,7 +308,7 @@ In case of error the following `code`s are supported in addition to the general 
 
 All other fields might be undefined.
 
-### Trip service
+### Trip
 
 The trip plugin solves the Traveling Salesman Problem using a greedy heuristic (farthest-insertion algorithm).
 The returned path does not have to be the fastest path, as TSP is NP-hard it is only an approximation.
@@ -360,9 +344,9 @@ In case of error the following `code`s are supported in addition to the general 
 
 All other fields might be undefined.
 
-### Tile service
+### Tile
 
-This generates [Mapbox Vector Tiles](https://www.mapbox.com/developers/vector-tiles/) that can be viewed with a vector-tile capable slippy-map viewer.  The tiles contain road geometries and metadata that can be used to examine the routing graph.  The tiles are generated directly from the data in-memory, so are in sync with actual routing results, and let you examine which roads are actually routable, and what weights they have applied.
+This service generates [Mapbox Vector Tiles](https://www.mapbox.com/developers/vector-tiles/) that can be viewed with a vector-tile capable slippy-map viewer.  The tiles contain road geometries and metadata that can be used to examine the routing graph.  The tiles are generated directly from the data in-memory, so are in sync with actual routing results, and let you examine which roads are actually routable, and what weights they have applied.
 
 ```endpoint
 GET /tile/v1/{profile}/tile({x},{y},{zoom}).mvt
@@ -380,6 +364,7 @@ curl 'http://router.project-osrm.org/tile/v1/car/tile(1310,3166,13).mvt'
 #### Example response
 
 > ![example rendered tile](images/example-tile-response.png)
+> http://map.project-osrm.org/debug/#14.33/52.5212/13.3919
 
 The response object is either a binary encoded blob with a `Content-Type` of `application/x-protobuf`, or a `404` error.  Note that OSRM is hard-coded to only return tiles from zoom level 12 and higher (to avoid accidentally returning extremely large vector tiles).
 
@@ -390,7 +375,7 @@ Vector tiles contain two layers:
 | Field        | Type      | Description                              |
 | ------------ | --------- | ---------------------------------------- |
 | `speed`      | `integer` | the speed on that road segment, in km/h  |
-| `is_small`   | `boolean` | whether this segment belongs to a small (<1000 node) [strongly connected component](https://en.wikipedia.org/wiki/Strongly_connected_component) |
+| `is_small`   | `boolean` | whether this segment belongs to a small (< 1000 node) [strongly connected component](https://en.wikipedia.org/wiki/Strongly_connected_component) |
 | `datasource` | `string`  | the source for the speed value (normally `lua profile` unless you're using the [traffic update feature](https://github.com/Project-OSRM/osrm-backend/wiki/Traffic), in which case it contains the stem of the filename that supplied the speed value for this segment |
 | `duration`   | `float`   | how long this segment takes to traverse, in seconds |
 | `name`       | `string`  | the name of the road this segment belongs to |
@@ -403,9 +388,10 @@ Vector tiles contain two layers:
 | `turn_angle` | `integer` | the angle of the turn, relative to the `bearing_in`.  -180 to +180, 0 = straight ahead, 90 = 90-degrees to the right |
 | `cost`       | `float`   | the time we think it takes to make that turn, in seconds.  May be negative, depending on how the data model is constructed (some turns get a "bonus"). |
 
+
 ## Result objects
 
-### Route object
+### Route
 
 Represents a route through (potentially multiple) waypoints.
 
@@ -447,7 +433,7 @@ Three input coordinates, `geometry=geojson`, `steps=false`:
 }
 ```
 
-### RouteLeg object
+### RouteLeg
 
 Represents a route between two waypoints.
 
@@ -494,7 +480,7 @@ With `steps=false` and `annotations=true`:
 }
 ```
 
-### Annotation object
+### Annotation
 
 Annotation of the whole route leg with fine-grained information about each segment or node id.
 
@@ -517,7 +503,7 @@ Annotation of the whole route leg with fine-grained information about each segme
 ```
 
 
-### RouteStep object
+### RouteStep
 
 A step consists of a maneuver such as a turn or merge, followed
 by a distance of travel along a single way to the subsequent
@@ -585,7 +571,7 @@ step.
 }
 ```
 
-### StepManeuver object
+### StepManeuver
 
 **Properties**
 
@@ -651,7 +637,7 @@ step.
 
 New properties (potentially depending on `type`) may be introduced in the future without an API version change.
 
-### Lane object
+### Lane
 
 A `Lane` represents a turn lane at the corresponding turn location.
 
@@ -682,7 +668,7 @@ A `Lane` represents a turn lane at the corresponding turn location.
 }
  ```
 
-### Intersection object
+### Intersection
 
 An intersection gives a full representation of any cross-way the path passes bay. For every step, the very first intersection (`intersections[0]`) corresponds to the
 location of the StepManeuver. Further intersections are listed for every cross-way until the next turn instruction.
@@ -716,7 +702,7 @@ location of the StepManeuver. Further intersections are listed for every cross-w
 }
 ```
 
-### Waypoint object
+### Waypoint
 
 Object used to describe waypoint on a route.
 
