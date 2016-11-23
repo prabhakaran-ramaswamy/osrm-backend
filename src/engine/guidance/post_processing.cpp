@@ -826,7 +826,6 @@ bool isStaggeredIntersection(const RouteStep &previous, const RouteStep &current
     // A RouteStep holds distance/duration from the maneuver to the subsequent step.
     // We are only interested in the distance between the first and the second.
     const auto is_short = previous.distance < MAX_STAGGERED_DISTANCE;
-
     return is_short && (left_right || right_left);
 }
 
@@ -932,6 +931,7 @@ std::vector<RouteStep> removeNoTurnInstructions(std::vector<RouteStep> steps)
 // that we come across.
 std::vector<RouteStep> postProcess(std::vector<RouteStep> steps)
 {
+    util::guidance::print(steps);
     // the steps should always include the first/last step in form of a location
     BOOST_ASSERT(steps.size() >= 2);
     if (steps.size() == 2)

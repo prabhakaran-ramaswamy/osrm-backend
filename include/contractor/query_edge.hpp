@@ -26,6 +26,8 @@ struct QueryEdge
             forward = other.forward;
             backward = other.backward;
         }
+        // this ID is either the middle node of the shortcut, or the ID of the edge based node (node
+        // based edge) storing the appropriate data
         NodeID id : 31;
         bool shortcut : 1;
         int weight : 30;

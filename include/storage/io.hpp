@@ -227,7 +227,6 @@ inline void readEdges(io::FileReader &edges_input_file,
     for (std::uint64_t i = 0; i < number_of_edges; ++i)
     {
         edges_input_file.ReadInto(current_edge_data);
-
         geometry_list[i] = current_edge_data.via_geometry;
         name_id_list[i] = current_edge_data.name_id;
         turn_instruction_list[i] = current_edge_data.turn_instruction;

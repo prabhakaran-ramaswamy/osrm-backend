@@ -209,6 +209,11 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                     const PhantomNodes &phantom_node_pair,
                     std::vector<PathData> &unpacked_path) const
     {
+        std::cout << "[packed path]\n";
+        for( auto itr = packed_path_begin; itr != packed_path_end; ++itr )
+        {
+            std::cout << "\t" << *itr << std::endl;
+        }
         BOOST_ASSERT(std::distance(packed_path_begin, packed_path_end) > 0);
 
         const bool start_traversed_in_reverse =
@@ -413,6 +418,13 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 unpacked_path.pop_back();
             }
             BOOST_ASSERT(!unpacked_path.empty());
+        }
+        std::cout << "[unpacked path]\n";
+        for (auto data : unpacked_path)
+        {
+            std::cout << "Duration: " << data.duration_until_turn
+                      << " Instr.: " << (int)data.turn_instruction.type << " "
+                      << (int)data.turn_instruction.direction_modifier << std::endl;
         }
     }
 

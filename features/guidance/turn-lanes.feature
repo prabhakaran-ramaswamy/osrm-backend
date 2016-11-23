@@ -117,7 +117,7 @@ Feature: Turn Lane Guidance
         Given the node map
             """
                 e
-            a 1 b   c
+            a 1 b---c
                 d
             """
 

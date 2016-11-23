@@ -456,17 +456,17 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
             // at the target intersection, we merge to the right, so we need to shift the current
             // angle to the left
 
-            road.bearing = adjustAngle(road.bearing, corrected_offset);
+            road.bearing = adjustAngle(road.bearing, -corrected_offset);
             if (index == 0)
             {
                 for (std::size_t i = 1; i < intersection.size(); ++i)
                 {
-                    intersection[i].angle += corrected_offset;
+                    intersection[i].angle -= corrected_offset;
                 }
             }
             else
             {
-                road.angle = adjustAngle(road.angle, -corrected_offset);
+                road.angle = adjustAngle(road.angle, corrected_offset);
             }
         }
         else if (CanMerge(node_at_next_intersection,
@@ -482,17 +482,17 @@ Intersection IntersectionNormalizer::AdjustForJoiningRoads(const NodeID node_at_
                 get_corrected_offset(offset, road, intersection[(index + 1) % intersection.size()]);
             // at the target intersection, we merge to the left, so we need to shift the current
             // angle to the right
-            road.bearing = adjustAngle(road.bearing, -corrected_offset);
+            road.bearing = adjustAngle(road.bearing, corrected_offset);
             if (index == 0)
             {
                 for (std::size_t i = 1; i < intersection.size(); ++i)
                 {
-                    intersection[i].angle -= corrected_offset;
+                    intersection[i].angle += corrected_offset;
                 }
             }
             else
             {
-                road.angle = adjustAngle(road.angle, corrected_offset);
+                road.angle = adjustAngle(road.angle, -corrected_offset);
             }
         }
     }
@@ -508,7 +508,6 @@ IntersectionNormalizer::AdjustBearingsForMergeAtDestination(const NodeID node_at
         return intersection;
 
     const util::Coordinate coordinate_at_intersection = node_coordinates[node_at_intersection];
-    // never adjust u-turns
     for (std::size_t index = 0; index < intersection.size(); ++index)
     {
         auto &road = intersection[index];
@@ -573,7 +572,9 @@ IntersectionNormalizer::AdjustBearingsForMergeAtDestination(const NodeID node_at
                 intersection[(intersection.size() + index - 1) % intersection.size()]);
             // at the target intersection, we merge to the right, so we need to shift the current
             // angle to the left
-            road.bearing = adjustAngle(road.bearing, corrected_offset);
+            std::cout << "Adjusted Bearing: (1) " << road.bearing;
+            road.bearing = adjustAngle(road.bearing, -corrected_offset);
+            std::cout << " to " << road.bearing << std::endl;
         }
         else if (CanMerge(node_at_next_intersection,
                           next_intersection_along_road,
@@ -588,7 +589,9 @@ IntersectionNormalizer::AdjustBearingsForMergeAtDestination(const NodeID node_at
                 get_corrected_offset(offset, road, intersection[(index + 1) % intersection.size()]);
             // at the target intersection, we merge to the left, so we need to shift the current
             // angle to the right
-            road.bearing = adjustAngle(road.bearing, -corrected_offset);
+            std::cout << "Adjusted Bearing: (2) " << road.bearing;
+            road.bearing = adjustAngle(road.bearing, corrected_offset);
+            std::cout << " to " << road.bearing << std::endl;
         }
     }
     return intersection;

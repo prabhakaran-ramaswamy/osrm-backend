@@ -379,6 +379,15 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
         const auto merged_shape =
             normalizer.process(node_at_center_of_intersection, intersection_shape, &merging_map);
 
+#if 0
+        std::cout << "intersection\n";
+        for( auto road : intersection_shape )
+            std::cout << "\t" << toString(road) << std::endl;
+        std::cout << "Shape:\n";
+        for( auto road : merged_shape )
+            std::cout << "\t" << toString(road) << std::endl;
+#endif
+
         for (const EdgeID outgoing_edge :
              m_node_based_graph->GetAdjacentEdgeRange(node_at_center_of_intersection))
         {
@@ -399,22 +408,25 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                                        intersection_shape,
                                                        merging_map);
 
-            auto intersection = turn_analysis.assignTurnTypes(
-                node_along_road_entering, incoming_edge, std::move(intersection_with_flags_and_angles));
+            auto intersection =
+                turn_analysis.assignTurnTypes(node_along_road_entering,
+                                              incoming_edge,
+                                              std::move(intersection_with_flags_and_angles));
 
-            //auto intersection = turn_analysis(node_along_road_entering, incoming_edge);
+#if 1
+            const auto compare_intersection =
+                turn_analysis(node_along_road_entering, incoming_edge);
 
-            /*
             const auto print = [&]() {
                 std::cout << "[node] "
                           << (util::Coordinate)m_node_info_list[node_at_center_of_intersection]
                           << std::endl;
                 std::cout << "Original:\n";
-                for (auto road : intersection)
+                for (auto road : compare_intersection)
                     std::cout << "\t" << toString(road) << std::endl;
 
                 std::cout << "Compare:\n";
-                for (auto road : compare_intersection)
+                for (auto road : intersection)
                     std::cout << "\t" << toString(road) << std::endl;
             };
 
@@ -438,7 +450,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 return true;
             };
 
-            if (!compare_intersections(intersection, compare_intersection))
+            if (!compare_intersections(compare_intersection, intersection))
             {
                 std::cout << "[shape]\n";
                 for (const auto road : intersection_shape)
@@ -448,7 +460,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 for (const auto road : merged_shape)
                     std::cout << "\t" << toString(road) << std::endl;
             }
-            */
+#endif
             BOOST_ASSERT(intersection.valid());
 
             intersection = turn_lane_handler.assignTurnLanes(
@@ -458,7 +470,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
             // the entry class depends on the turn, so we have to classify the interesction for
             // every edge
-            const auto turn_classification = classifyIntersection(merged_shape);
+            const auto turn_classification = classifyIntersection(intersection);
 
             const auto entry_class_id = [&](const util::guidance::EntryClass entry_class) {
                 if (0 == entry_class_hash.count(entry_class))
@@ -508,7 +520,6 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                     scripting_environment.GetTurnPenalty(180. - turn.angle);
 
                 const auto turn_instruction = turn.instruction;
-
                 if (turn_instruction.direction_modifier == guidance::DirectionModifier::UTurn)
                 {
                     distance += profile_properties.u_turn_penalty;
@@ -571,6 +582,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                                     distance,
                                                     true,
                                                     false);
+                BOOST_ASSERT(original_edges_counter == m_edge_based_edge_list.size());
 
                 // Here is where we write out the mapping between the edge-expanded edges, and
                 // the node-based edges that are originally used to calculate the `distance`
