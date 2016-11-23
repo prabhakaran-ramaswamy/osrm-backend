@@ -29,7 +29,7 @@
     "test": "npm run lint && ./node_modules/cucumber/bin/cucumber.js features/ -p verify",
     "clean-test": "rm -rf test/cache",
     "cucumber": "./node_modules/cucumber/bin/cucumber.js",
-    "build-api-docs": "rm -rf build/docs && mkdir -p build/docs/tmp/src && cp -r node_modules/docbox/src/* build/docs/tmp/src && cp -r node_modules/docbox/css build/docs/ && cp node_modules/docbox/index.html build/docs/tmp && cp docs/src/* build/docs/tmp/src/custom && mkdir -p build/docs/tmp/content && cp docs/*.md build/docs/tmp/content && cd build/docs/tmp && NODE_ENV=production browserify src/index.js | uglifyjs -c -m > ../bundle.js && babel src --out-dir lib && node lib/render.js ../index.html && cd .. && rm -rf tmp"
+    "build-api-docs": "rm -rf build/docs && mkdir -p build/docs/tmp/src && cp -r node_modules/docbox/src/* build/docs/tmp/src && cp -r node_modules/docbox/css build/docs/ && cp -r docs/images build/docs && cp node_modules/docbox/index.html build/docs/tmp && cp docs/src/* build/docs/tmp/src/custom && mkdir -p build/docs/tmp/content && cp docs/*.md build/docs/tmp/content && cd build/docs/tmp && NODE_ENV=production browserify src/index.js | uglifyjs -c -m > ../bundle.js && babel src --out-dir lib && node lib/render.js ../index.html && cd .. && rm -rf tmp"
   },
   "repository": {
     "type": "git",
