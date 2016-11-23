@@ -5,6 +5,7 @@
 #include "engine/geospatial_query.hpp"
 #include "util/coordinate.hpp"
 #include "util/timing_util.hpp"
+#include "storage/io.hpp"
 
 #include <iostream>
 #include <random>
@@ -29,14 +30,17 @@ using RTreeLeaf = extractor::EdgeBasedNode;
 using BenchStaticRTree =
     util::StaticRTree<RTreeLeaf, util::ShM<util::Coordinate, false>::vector, false>;
 
-std::vector<util::Coordinate> loadCoordinates(storage::io::FileReader &file_reader)
+std::vector<util::Coordinate> loadCoordinates(const boost::filesystem::path &nodes_file)
 {
+    osrm::storage::io::FileReader nodes_path_file_reader(nodes_file,
+                                                         osrm::storage::io::FileReader::HasNoFingerprint);
+
     extractor::QueryNode current_node;
-    unsigned coordinate_count = file_reader.ReadElementCount32();
+    unsigned coordinate_count = nodes_path_file_reader.ReadElementCount32();
     std::vector<util::Coordinate> coords(coordinate_count);
     for (unsigned i = 0; i < coordinate_count; ++i)
     {
-        file_reader.ReadInto(&current_node, 1);
+        nodes_path_file_reader.ReadInto(&current_node, 1);
         coords[i] = util::Coordinate(current_node.lon, current_node.lat);
     }
     return coords;
