@@ -235,8 +235,7 @@ std::istream &operator>>(std::istream &in, RangeTable<BLOCK_SIZE, USE_SHARED_MEM
     return in;
 }
 
-template <unsigned BLOCK_SIZE, bool USE_SHARED_MEMORY>
-RangeTable<BLOCK_SIZE, USE_SHARED_MEMORY> ReadARangeTable(storage::io::FileReader &filereader) { 
+static RangeTable ReadARangeTable(io::FileReader &filereader) { 
     RangeTable<BLOCK_SIZE, USE_SHARED_MEMORY> table;
 
     unsigned number_of_blocks = filereader.ReadElementCount32();
