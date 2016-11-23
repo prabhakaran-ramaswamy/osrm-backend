@@ -434,7 +434,6 @@ end
 function handle_speed(way,result,data)
   if result.forward_speed == -1 then
     local highway_speed = speed_profile[way:get_value_by_key("highway")]
-    local max_speed = parse_maxspeed( way:get_value_by_key("maxspeed") )
     -- Set the avg speed on the way if it is accessible by road class
     if highway_speed then
       result.forward_speed = highway_speed
