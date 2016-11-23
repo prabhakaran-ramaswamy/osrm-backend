@@ -32,6 +32,16 @@ class FileReader
     boost::filesystem::ifstream input_stream;
 
   public:
+    class LineIterator : std::string 
+    { 
+        friend std::istream & operator>>(std::istream &is, LineIterator &line)
+        {   
+            return std::getline(is, line);
+        }
+    };
+    auto GetLineIteratorBegin() { return std::istream_iterator<LineIterator>(input_stream); }
+    auto GetLineIteratorEnd() { return std::istream_iterator<LineIterator>(); }
+
     enum FingerprintFlag
     {
         VerifyFingerprint,
@@ -147,6 +157,23 @@ class FileReader
         }
         return result;
     }
+
+    std::string ReadLine()
+    {
+        std::string thisline;
+        try
+        {
+            std::getline(input_stream, thisline);
+        }
+        catch (const std::ios_base::failure &e)
+        {
+            // EOF is OK here, everything else, re-throw
+            if (!input_stream.eof())
+                throw;
+        }
+        return thisline;
+    }
+
 };
 
 // To make function calls consistent, this function returns the fixed number of properties

@@ -17,6 +17,7 @@
 #include "util/string_util.hpp"
 #include "util/timing_util.hpp"
 #include "util/typedefs.hpp"
+#include "storage/io.hpp"
 
 #include <boost/assert.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -299,9 +300,11 @@ parse_segment_lookup_from_csv_files(const std::vector<std::string> &segment_spee
         const auto file_id = idx + 1; // starts at one, zero means we assigned the weight
         const auto filename = segment_speed_filenames[idx];
 
-        std::ifstream segment_speed_file{filename, std::ios::binary};
-        if (!segment_speed_file)
-            throw util::exception{"Unable to open segment speed file " + filename};
+        // std::ifstream segment_speed_file{filename, std::ios::binary};
+        storage::io::FileReader segment_speed_file_reader(std::string(filename),
+                                                          storage::io::FileReader::HasNoFingerprint);
+        // if (!segment_speed_file)
+        //     throw util::exception{"Unable to open segment speed file " + filename};
 
         SegmentSpeedSourceFlatMap local;
 
@@ -309,8 +312,11 @@ parse_segment_lookup_from_csv_files(const std::vector<std::string> &segment_spee
         std::uint64_t to_node_id{};
         unsigned speed{};
 
-        for (std::string line; std::getline(segment_speed_file, line);)
-        {
+        // for (std::string line; std::getline(segment_speed_file, line);)
+        // for (auto line = segment_speed_file_reader.ReadLine(); !line.empty(); line = segment_speed_file_reader.ReadLine())
+
+        std::for_each(segment_speed_file_reader.GetLineIteratorBegin(), segment_speed_file_reader.GetLineIteratorEnd(), [&](const std::string &line) {
+
             using namespace boost::spirit::qi;
 
             auto it = begin(line);
@@ -332,7 +338,8 @@ parse_segment_lookup_from_csv_files(const std::vector<std::string> &segment_spee
                                    {speed, static_cast<std::uint8_t>(file_id)}};
 
             local.push_back(std::move(val));
-        }
+        });
+        
 
         util::SimpleLogger().Write() << "Loaded speed file " << filename << " with " << local.size()
                                      << " speeds";
