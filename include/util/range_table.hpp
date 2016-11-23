@@ -3,6 +3,7 @@
 
 #include "util/integer_range.hpp"
 #include "util/shared_memory_vector_wrapper.hpp"
+#include "storage/io.hpp"
 
 #include <array>
 #include <fstream>
@@ -233,6 +234,26 @@ std::istream &operator>>(std::istream &in, RangeTable<BLOCK_SIZE, USE_SHARED_MEM
     in.read((char *)table.diff_blocks.data(), BLOCK_SIZE * number_of_blocks);
     return in;
 }
+
+template <unsigned BLOCK_SIZE, bool USE_SHARED_MEMORY>
+RangeTable<BLOCK_SIZE, USE_SHARED_MEMORY> ReadARangeTable(storage::io::FileReader &filereader) { 
+    RangeTable<BLOCK_SIZE, USE_SHARED_MEMORY> table;
+
+    unsigned number_of_blocks = filereader.ReadElementCount32();
+    // read total length
+    filereader.ReadInto(&table.sum_lengths, 1);
+
+    table.block_offsets.resize(number_of_blocks);
+    table.diff_blocks.resize(number_of_blocks);
+
+    // read block offsets
+    filereader.ReadInto(table.block_offsets.data(), number_of_blocks);
+    // read blocks
+    filereader.ReadInto(table.diff_blocks.data(), number_of_blocks);
+
+    return &table;
+}
+
 }
 }
 

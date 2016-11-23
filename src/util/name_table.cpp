@@ -2,6 +2,7 @@
 #include "util/exception.hpp"
 #include "util/simple_logger.hpp"
 #include "storage/io.hpp"
+#include "util/range_table.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -16,39 +17,12 @@ namespace util
 
 NameTable::NameTable(const std::string &filename)
 {
-    // boost::filesystem::ifstream name_stream(filename, std::ios::binary);
-
     storage::io::FileReader name_stream_file_reader(filename, storage::io::FileReader::HasNoFingerprint);
 
-    // if (!name_stream)
-    //     throw exception("Failed to open " + filename + " for reading.");
-
-    unsigned BLOCK_SIZE = 16;
-    bool USE_SHARED_MEMORY = false;
-    RangeTable<16, false> m_name_table;
     // name_stream >> m_name_table;
 
-
-//     template <unsigned BLOCK_SIZE, bool USE_SHARED_MEMORY>
-// std::istream &operator>>(std::istream &in, RangeTable<BLOCK_SIZE, USE_SHARED_MEMORY> &table)
-// {
-    // read number of block
-    unsigned number_of_blocks = name_stream_file_reader.ReadElementCount32();
-    // name_stream_file.read((char *)&number_of_blocks, sizeof(unsigned));
-    // read total length
-    // name_stream_file.read((char *)&table.sum_lengths, sizeof(unsigned));
-    m_name_table.sum_lengths = name_stream_file_reader.ReadElementCount32();
-
-    m_name_table.block_offsets.resize(number_of_blocks);
-    m_name_table.diff_blocks.resize(number_of_blocks);
-
-    // read block offsets
-    name_stream_file_reader.ReadInto(m_name_table.block_offsets.data(), number_of_blocks);
-    // read blocks
-    name_stream_file_reader.ReadInto(m_name_table.diff_blocks.data(), number_of_blocks);
-//     return in;
-// }
-
+    auto m_name_table = RangeTable::ReadARangeTable(name_stream_file_reader);
+    
     unsigned number_of_chars = name_stream_file_reader.ReadElementCount32();
 
     m_names_char_list.resize(number_of_chars + 1); //+1 gives sentinel element
