@@ -32,15 +32,15 @@ class FileReader
     boost::filesystem::ifstream input_stream;
 
   public:
-    class LineIterator : std::string 
-    { 
-        friend std::istream & operator>>(std::istream &is, LineIterator &line)
-        {   
+    class LineWrapper : public std::string
+    {
+        friend std::istream & operator>>(std::istream &is, LineWrapper &line)
+        {
             return std::getline(is, line);
         }
     };
-    auto GetLineIteratorBegin() { return std::istream_iterator<LineIterator>(input_stream); }
-    auto GetLineIteratorEnd() { return std::istream_iterator<LineIterator>(); }
+    auto GetLineIteratorBegin() { return std::istream_iterator<LineWrapper>(input_stream); }
+    auto GetLineIteratorEnd() { return std::istream_iterator<LineWrapper>(); }
 
     enum FingerprintFlag
     {
