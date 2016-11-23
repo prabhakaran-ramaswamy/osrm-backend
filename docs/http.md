@@ -77,10 +77,12 @@ curl 'http://router.project-osrm.org/route/v1/driving/polyline(ofp_Ik_vpAilAyu@t
 
 Every response object has a `code` field.
 
+#### Example response
+
 ```json
 {
-"code": {code},
-"message": {message}
+"code": "Ok",
+"message": "Everything worked"
 }
 ```
 
@@ -158,7 +160,7 @@ curl 'http://router.project-osrm.org/nearest/v1/driving/13.388860,52.517037?numb
       },
       {
          "hint" : "KioKgDbbDgCUBAEAAAAAABoAAAAAAAAAPAAAABlnCQCLtwAA50vMADJZIQM8TMwArVghAwAAAQH1a66g",
-         "distance" : 15.872438
+         "distance" : 15.872438,
          "name" : "Friedrichstraße",
          "location" : [
             13.388775,
