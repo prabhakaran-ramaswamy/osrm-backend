@@ -44,26 +44,13 @@ class RasterGrid
         ydim = _ydim;
         _data.reserve(ydim * xdim);
 
-
-
-        // boost::filesystem::ifstream stream(filepath, std::ios::binary);
-        // if (!stream)
-        // {
-        //     throw util::exception("Unable to open raster file.");
-        // }
-
         storage::io::FileReader file_reader(filepath,
                                            storage::io::FileReader::HasNoFingerprint);
 
-        // stream.seekg(0, std::ios_base::end);
         std::string buffer;
-        // buffer.resize(static_cast<std::size_t>(stream.tellg()));
         buffer.resize(file_reader.Size());
 
-        // stream.seekg(0, std::ios_base::beg);
-
         BOOST_ASSERT(buffer.size() > 1);
-        // stream.read(&buffer[0], static_cast<std::streamsize>(buffer.size()));
 
         file_reader.ReadInto(&buffer[0], buffer.size());
 

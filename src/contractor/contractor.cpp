@@ -300,20 +300,14 @@ parse_segment_lookup_from_csv_files(const std::vector<std::string> &segment_spee
         const auto file_id = idx + 1; // starts at one, zero means we assigned the weight
         const auto filename = segment_speed_filenames[idx];
 
-        // std::ifstream segment_speed_file{filename, std::ios::binary};
         storage::io::FileReader segment_speed_file_reader(std::string(filename),
                                                           storage::io::FileReader::HasNoFingerprint);
-        // if (!segment_speed_file)
-        //     throw util::exception{"Unable to open segment speed file " + filename};
-
+       
         SegmentSpeedSourceFlatMap local;
 
         std::uint64_t from_node_id{};
         std::uint64_t to_node_id{};
         unsigned speed{};
-
-        // for (std::string line; std::getline(segment_speed_file, line);)
-        // for (auto line = segment_speed_file_reader.ReadLine(); !line.empty(); line = segment_speed_file_reader.ReadLine())
 
         std::for_each(segment_speed_file_reader.GetLineIteratorBegin(), segment_speed_file_reader.GetLineIteratorEnd(), [&](const std::string &line) {
 
@@ -394,10 +388,8 @@ parse_turn_penalty_lookup_from_csv_files(const std::vector<std::string> &turn_pe
         const auto file_id = idx + 1; // starts at one, zero means we assigned the weight
         const auto filename = turn_penalty_filenames[idx];
 
-        std::ifstream turn_penalty_file{filename, std::ios::binary};
-        if (!turn_penalty_file)
-            throw util::exception{"Unable to open turn penalty file " + filename};
-
+        storage::io::FileReader turn_penalty_file_reader(std::string(filename),
+                                                          storage::io::FileReader::HasNoFingerprint);
         TurnPenaltySourceFlatMap local;
 
         std::uint64_t from_node_id{};
@@ -405,8 +397,8 @@ parse_turn_penalty_lookup_from_csv_files(const std::vector<std::string> &turn_pe
         std::uint64_t to_node_id{};
         double penalty{};
 
-        for (std::string line; std::getline(turn_penalty_file, line);)
-        {
+        std::for_each(turn_penalty_file_reader.GetLineIteratorBegin(), turn_penalty_file_reader.GetLineIteratorEnd(), [&](const std::string &line) {
+        
             using namespace boost::spirit::qi;
 
             auto it = begin(line);
@@ -429,7 +421,7 @@ parse_turn_penalty_lookup_from_csv_files(const std::vector<std::string> &turn_pe
                 {OSMNodeID{from_node_id}, OSMNodeID{via_node_id}, OSMNodeID{to_node_id}},
                 {penalty, static_cast<std::uint8_t>(file_id)}};
             local.push_back(std::move(val));
-        }
+        });
 
         util::SimpleLogger().Write() << "Loaded penalty file " << filename << " with "
                                      << local.size() << " turn penalties";

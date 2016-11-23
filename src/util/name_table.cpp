@@ -1,6 +1,7 @@
 #include "util/name_table.hpp"
 #include "util/exception.hpp"
 #include "util/simple_logger.hpp"
+#include "storage/io.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -15,27 +16,46 @@ namespace util
 
 NameTable::NameTable(const std::string &filename)
 {
-    boost::filesystem::ifstream name_stream(filename, std::ios::binary);
+    // boost::filesystem::ifstream name_stream(filename, std::ios::binary);
 
-    if (!name_stream)
-        throw exception("Failed to open " + filename + " for reading.");
+    storage::io::FileReader name_stream_file_reader(filename, storage::io::FileReader::HasNoFingerprint);
 
-    name_stream >> m_name_table;
+    // if (!name_stream)
+    //     throw exception("Failed to open " + filename + " for reading.");
 
-    if (!name_stream)
-        throw exception("Unable to deserialize RangeTable for NameTable");
+    unsigned BLOCK_SIZE = 16;
+    bool USE_SHARED_MEMORY = false;
+    RangeTable<16, false> m_name_table;
+    // name_stream >> m_name_table;
 
-    unsigned number_of_chars = 0;
-    name_stream.read(reinterpret_cast<char *>(&number_of_chars), sizeof(number_of_chars));
-    if (!name_stream)
-        throw exception("Encountered invalid file, failed to read number of contained chars");
+
+//     template <unsigned BLOCK_SIZE, bool USE_SHARED_MEMORY>
+// std::istream &operator>>(std::istream &in, RangeTable<BLOCK_SIZE, USE_SHARED_MEMORY> &table)
+// {
+    // read number of block
+    unsigned number_of_blocks = name_stream_file_reader.ReadElementCount32();
+    // name_stream_file.read((char *)&number_of_blocks, sizeof(unsigned));
+    // read total length
+    // name_stream_file.read((char *)&table.sum_lengths, sizeof(unsigned));
+    m_name_table.sum_lengths = name_stream_file_reader.ReadElementCount32();
+
+    m_name_table.block_offsets.resize(number_of_blocks);
+    m_name_table.diff_blocks.resize(number_of_blocks);
+
+    // read block offsets
+    name_stream_file_reader.ReadInto(m_name_table.block_offsets.data(), number_of_blocks);
+    // read blocks
+    name_stream_file_reader.ReadInto(m_name_table.diff_blocks.data(), number_of_blocks);
+//     return in;
+// }
+
+    unsigned number_of_chars = name_stream_file_reader.ReadElementCount32();
 
     m_names_char_list.resize(number_of_chars + 1); //+1 gives sentinel element
     m_names_char_list.back() = 0;
     if (number_of_chars > 0)
     {
-        name_stream.read(reinterpret_cast<char *>(&m_names_char_list[0]),
-                         number_of_chars * sizeof(m_names_char_list[0]));
+        name_stream_file_reader.ReadInto(&m_names_char_list[0], number_of_chars);
     }
     else
     {
@@ -43,9 +63,6 @@ NameTable::NameTable(const std::string &filename)
             << "list of street names is empty in construction of name table from: \"" << filename
             << "\"";
     }
-    if (!name_stream)
-        throw exception("Failed to read " + std::to_string(number_of_chars) + " characters from " +
-                        filename);
 }
 
 std::string NameTable::GetNameForID(const unsigned name_id) const
