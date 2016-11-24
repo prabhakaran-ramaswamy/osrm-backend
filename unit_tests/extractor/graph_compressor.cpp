@@ -18,10 +18,12 @@ using Graph = util::NodeBasedDynamicGraph;
 
 namespace
 {
+
 // creates a default edge of unit weight
 inline InputEdge MakeUnitEdge(const NodeID from, const NodeID to)
 {
-    // src, tgt, dist, edge_id, name_id, access_restricted, fwd, bkwd, roundabout, circular travel_mode
+    // src, tgt, dist, edge_id, name_id, access_restricted, fwd, bkwd, roundabout, circular
+    // travel_mode
     return {from,
             to,
             1,
@@ -35,7 +37,8 @@ inline InputEdge MakeUnitEdge(const NodeID from, const NodeID to)
             TRAVEL_MODE_INACCESSIBLE,
             INVALID_LANE_DESCRIPTIONID};
 }
-}
+
+} // namespace
 
 BOOST_AUTO_TEST_CASE(long_road_test)
 {
@@ -49,16 +52,14 @@ BOOST_AUTO_TEST_CASE(long_road_test)
     RestrictionMap map;
     CompressedEdgeContainer container;
 
-    std::vector<InputEdge> edges = {
-
-        MakeUnitEdge(0,1),
-        MakeUnitEdge(1,0),
-        MakeUnitEdge(1,2),
-        MakeUnitEdge(2,1),
-        MakeUnitEdge(2,3),
-        MakeUnitEdge(3,2),
-        MakeUnitEdge(3,4),
-        MakeUnitEdge(4,3)};
+    std::vector<InputEdge> edges = {MakeUnitEdge(0, 1),
+                                    MakeUnitEdge(1, 0),
+                                    MakeUnitEdge(1, 2),
+                                    MakeUnitEdge(2, 1),
+                                    MakeUnitEdge(2, 3),
+                                    MakeUnitEdge(3, 2),
+                                    MakeUnitEdge(3, 4),
+                                    MakeUnitEdge(4, 3)};
 
     BOOST_ASSERT(edges[0].data.IsCompatibleTo(edges[2].data));
     BOOST_ASSERT(edges[2].data.IsCompatibleTo(edges[4].data));
@@ -88,20 +89,18 @@ BOOST_AUTO_TEST_CASE(loop_test)
     RestrictionMap map;
     CompressedEdgeContainer container;
 
-    std::vector<InputEdge> edges = {
-        MakeUnitEdge(0,1),
-        MakeUnitEdge(0,5),
-        MakeUnitEdge(1,0),
-        MakeUnitEdge(1,2),
-        MakeUnitEdge(2,1),
-        MakeUnitEdge(2,3),
-        MakeUnitEdge(3,2),
-        MakeUnitEdge(3,4),
-        MakeUnitEdge(4,3),
-        MakeUnitEdge(4,5),
-        MakeUnitEdge(5,0),
-        MakeUnitEdge(5,4)
-    };
+    std::vector<InputEdge> edges = {MakeUnitEdge(0, 1),
+                                    MakeUnitEdge(0, 5),
+                                    MakeUnitEdge(1, 0),
+                                    MakeUnitEdge(1, 2),
+                                    MakeUnitEdge(2, 1),
+                                    MakeUnitEdge(2, 3),
+                                    MakeUnitEdge(3, 2),
+                                    MakeUnitEdge(3, 4),
+                                    MakeUnitEdge(4, 3),
+                                    MakeUnitEdge(4, 5),
+                                    MakeUnitEdge(5, 0),
+                                    MakeUnitEdge(5, 4)};
 
     BOOST_ASSERT(edges.size() == 12);
     BOOST_ASSERT(edges[0].data.IsCompatibleTo(edges[1].data));
@@ -142,14 +141,12 @@ BOOST_AUTO_TEST_CASE(t_intersection)
     RestrictionMap map;
     CompressedEdgeContainer container;
 
-    std::vector<InputEdge> edges = {
-        MakeUnitEdge(0,1),
-        MakeUnitEdge(1,0),
-        MakeUnitEdge(1,2),
-        MakeUnitEdge(1,3),
-        MakeUnitEdge(2,1),
-        MakeUnitEdge(3,1)
-    };
+    std::vector<InputEdge> edges = {MakeUnitEdge(0, 1),
+                                    MakeUnitEdge(1, 0),
+                                    MakeUnitEdge(1, 2),
+                                    MakeUnitEdge(1, 3),
+                                    MakeUnitEdge(2, 1),
+                                    MakeUnitEdge(3, 1)};
 
     BOOST_ASSERT(edges[0].data.IsCompatibleTo(edges[1].data));
     BOOST_ASSERT(edges[1].data.IsCompatibleTo(edges[2].data));
@@ -178,11 +175,8 @@ BOOST_AUTO_TEST_CASE(street_name_changes)
     CompressedEdgeContainer container;
 
     std::vector<InputEdge> edges = {
-        MakeUnitEdge(0,1),
-        MakeUnitEdge(1,0),
-        MakeUnitEdge(1,2),
-        MakeUnitEdge(2,1)
-    };
+        MakeUnitEdge(0, 1), MakeUnitEdge(1, 0), MakeUnitEdge(1, 2), MakeUnitEdge(2, 1)};
+    edges[2].data.name_id = edges[3].data.name_id = 1;
 
     BOOST_ASSERT(edges[0].data.IsCompatibleTo(edges[1].data));
     BOOST_ASSERT(edges[2].data.IsCompatibleTo(edges[3].data));
@@ -207,11 +201,9 @@ BOOST_AUTO_TEST_CASE(direction_changes)
     CompressedEdgeContainer container;
 
     std::vector<InputEdge> edges = {
-        MakeUnitEdge(0,1),
-        MakeUnitEdge(1,0),
-        MakeUnitEdge(1,2),
-        MakeUnitEdge(2,1)
-    };
+        MakeUnitEdge(0, 1), MakeUnitEdge(1, 0), MakeUnitEdge(1, 2), MakeUnitEdge(2, 1)};
+    // make first edge point forward
+    edges[1].data.reversed = true;
 
     Graph graph(5, edges);
     compressor.Compress(barrier_nodes, traffic_lights, map, graph, container);
