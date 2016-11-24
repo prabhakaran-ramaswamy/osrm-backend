@@ -2,7 +2,7 @@
 #include "util/exception.hpp"
 #include "util/simple_logger.hpp"
 #include "storage/io.hpp"
-#include "util/range_table.hpp"
+//#include "util/range_table.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -21,7 +21,7 @@ NameTable::NameTable(const std::string &filename)
 
     // name_stream >> m_name_table;
 
-    auto m_name_table = RangeTable::ReadARangeTable(name_stream_file_reader);
+    m_name_table.ReadARangeTable(name_stream_file_reader);
     
     unsigned number_of_chars = name_stream_file_reader.ReadElementCount32();
 

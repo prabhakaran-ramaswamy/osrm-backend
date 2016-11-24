@@ -1,6 +1,7 @@
 #ifndef RANGE_TABLE_HPP
 #define RANGE_TABLE_HPP
 
+#include "util/name_table.hpp"
 #include "util/integer_range.hpp"
 #include "util/shared_memory_vector_wrapper.hpp"
 #include "storage/io.hpp"
@@ -139,6 +140,20 @@ template <unsigned BLOCK_SIZE, bool USE_SHARED_MEMORY> class RangeTable
         sum_lengths = lengths_prefix_sum;
     }
 
+    void ReadARangeTable(storage::io::FileReader &filereader) {
+        unsigned number_of_blocks = filereader.ReadElementCount32();
+        // read total length
+        filereader.ReadInto(&sum_lengths, 1);
+
+        block_offsets.resize(number_of_blocks);
+        diff_blocks.resize(number_of_blocks);
+
+        // read block offsets
+        filereader.ReadInto(block_offsets.data(), number_of_blocks);
+        // read blocks
+        filereader.ReadInto(diff_blocks.data(), number_of_blocks);
+    }
+
     inline RangeT GetRange(const unsigned id) const
     {
         BOOST_ASSERT(id < block_offsets.size() + diff_blocks.size() * BLOCK_SIZE);
@@ -233,24 +248,6 @@ std::istream &operator>>(std::istream &in, RangeTable<BLOCK_SIZE, USE_SHARED_MEM
     // read blocks
     in.read((char *)table.diff_blocks.data(), BLOCK_SIZE * number_of_blocks);
     return in;
-}
-
-static RangeTable ReadARangeTable(io::FileReader &filereader) { 
-    RangeTable<BLOCK_SIZE, USE_SHARED_MEMORY> table;
-
-    unsigned number_of_blocks = filereader.ReadElementCount32();
-    // read total length
-    filereader.ReadInto(&table.sum_lengths, 1);
-
-    table.block_offsets.resize(number_of_blocks);
-    table.diff_blocks.resize(number_of_blocks);
-
-    // read block offsets
-    filereader.ReadInto(table.block_offsets.data(), number_of_blocks);
-    // read blocks
-    filereader.ReadInto(table.diff_blocks.data(), number_of_blocks);
-
-    return &table;
 }
 
 }
