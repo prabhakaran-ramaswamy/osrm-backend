@@ -275,7 +275,7 @@ IntersectionGenerator::GetActualNextIntersection(const NodeID starting_node,
     if (resulting_via_edge)
         *resulting_via_edge = query_edge;
 
-    return GetConnectedRoads(query_edge, via_edge);
+    return GetConnectedRoads(query_node, query_edge);
 }
 
 const CoordinateExtractor &IntersectionGenerator::GetCoordinateExtractor() const

@@ -420,10 +420,12 @@ CoordinateExtractor::GetCoordinatesAlongRoad(const NodeID intersection_node,
                            geometry.rend(),
                            std::back_inserter(result),
                            compressedGeometryToCoordinate);
+            BOOST_ASSERT(intersection_node < node_coordinates.size());
             result.push_back(node_coordinates[intersection_node]);
         }
         else
         {
+            BOOST_ASSERT(intersection_node < node_coordinates.size());
             result.push_back(node_coordinates[intersection_node]);
             std::transform(geometry.begin(),
                            geometry.end(),
