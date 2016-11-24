@@ -160,6 +160,9 @@ function way_function (way, result)
   if "roundabout" == junction then
     result.roundabout = true
   end
+  if "circular" == junction then
+    result.circular = false
+  end
 
     -- speed
   if route_speeds[route] then
