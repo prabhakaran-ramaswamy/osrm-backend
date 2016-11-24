@@ -421,6 +421,7 @@ Intersection RoundaboutHandler::handleRoundabouts(const RoundaboutType roundabou
                             const auto &data_of_leaving_edge = node_based_graph.GetEdgeData(eid);
                             if (!data_of_leaving_edge.reversed &&
                                 !data_of_leaving_edge.roundabout &&
+                                !data_of_leaving_edge.circular &&
                                 !data_of_leaving_edge.road_classification.IsLowPriorityRoadClass())
                                 return true;
                         }
